@@ -1033,46 +1033,6 @@
             return hydrated;
         }
 
-        async function useForcedFallbackPair() {
-            const originalHasRemote = HAS_REMOTE_API;
-            if (!originalHasRemote) {
-                return await useFallbackPair();
-            }
-
-            for (const video of FALLBACK_VIDEOS) {
-                const meta = syntheticMetaForId(video.id);
-                registerVideo({
-                    id: video.id,
-                    title: `YouTube Video ${video.id}`,
-                    channel: "Offline pool",
-                    category: video.category,
-                    url: `https://www.youtube.com/watch?v=${video.id}`,
-                    ...meta
-                });
-            }
-
-            const known = allKnownVideos();
-            const usedSet = buildUsedIdSet();
-            let usable = known.filter((video) => !usedSet.has(video.id));
-            if (usable.length < 2) {
-                seenThisRun = new Set();
-                state.usedIds = [];
-                usable = known;
-            }
-            if (usable.length < 2) {
-                return null;
-            }
-
-            const left = usable[Math.floor(Math.random() * usable.length)];
-            const rightPool = usable.filter((video) => video.id !== left.id);
-            const right = rightPool[Math.floor(Math.random() * rightPool.length)];
-
-            const hydrated = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
-            rememberUsedId(hydrated[0] && hydrated[0].id);
-            rememberUsedId(hydrated[1] && hydrated[1].id);
-            return hydrated;
-        }
-
         async function buildFreshPair() {
             if (HAS_REMOTE_API) {
                 const excluded = buildUsedIdSet();
@@ -1161,12 +1121,6 @@
                     }
                 } catch (err) {
                     lastLoadError = String(err && err.message ? err.message : err);
-                }
-
-                const forced = await useForcedFallbackPair();
-                if (forced) {
-                    lastLoadError = "";
-                    return forced;
                 }
 
                 return null;
