@@ -422,6 +422,7 @@
         let state = { ...EMPTY_STATE };
         let currentPair = null;
         let isLoadingPair = false;
+        let lastLoadError = "";
         let candidateQueue = [];
         let seenThisRun = new Set();
         const metadataCache = new Map();
@@ -870,7 +871,8 @@
             const endpoint = apiUrl(`/api/random-pair?${params.toString()}`);
             const response = await fetch(endpoint, { cache: "no-store" });
             if (!response.ok) {
-                throw new Error("remote-pair-failed");
+                const body = await response.text().catch(() => "");
+                throw new Error(`remote-pair-failed:${response.status}:${body.slice(0, 160)}`);
             }
 
             const payload = await response.json();
@@ -1030,6 +1032,46 @@
             return hydrated;
         }
 
+        async function useForcedFallbackPair() {
+            const originalHasRemote = HAS_REMOTE_API;
+            if (!originalHasRemote) {
+                return await useFallbackPair();
+            }
+
+            for (const video of FALLBACK_VIDEOS) {
+                const meta = syntheticMetaForId(video.id);
+                registerVideo({
+                    id: video.id,
+                    title: `YouTube Video ${video.id}`,
+                    channel: "Offline pool",
+                    category: video.category,
+                    url: `https://www.youtube.com/watch?v=${video.id}`,
+                    ...meta
+                });
+            }
+
+            const known = allKnownVideos();
+            const usedSet = buildUsedIdSet();
+            let usable = known.filter((video) => !usedSet.has(video.id));
+            if (usable.length < 2) {
+                seenThisRun = new Set();
+                state.usedIds = [];
+                usable = known;
+            }
+            if (usable.length < 2) {
+                return null;
+            }
+
+            const left = usable[Math.floor(Math.random() * usable.length)];
+            const rightPool = usable.filter((video) => video.id !== left.id);
+            const right = rightPool[Math.floor(Math.random() * rightPool.length)];
+
+            const hydrated = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
+            rememberUsedId(hydrated[0] && hydrated[0].id);
+            rememberUsedId(hydrated[1] && hydrated[1].id);
+            return hydrated;
+        }
+
         async function buildFreshPair() {
             if (HAS_REMOTE_API) {
                 const excluded = buildUsedIdSet();
@@ -1053,8 +1095,10 @@
                         seenThisRun.add(right.id);
                         rememberUsedId(left.id);
                         rememberUsedId(right.id);
+                        lastLoadError = "";
                         return [left, right];
-                    } catch {
+                    } catch (err) {
+                        lastLoadError = String(err && err.message ? err.message : err);
                         // Retry with a fresh remote query.
                     }
                 }
@@ -1087,10 +1131,41 @@
                         seenThisRun.add(right.id);
                         rememberUsedId(left.id);
                         rememberUsedId(right.id);
+                        lastLoadError = "";
                         return [left, right];
-                    } catch {
+                    } catch (err) {
+                        lastLoadError = String(err && err.message ? err.message : err);
                         // Continue trying relaxed remote pulls.
                     }
+                }
+
+                try {
+                    const remoteBatch = await fetchRemoteBatch();
+                    if (remoteBatch.length >= 2) {
+                        const pool = remoteBatch.filter((video) => !excluded.has(video.id));
+                        const usable = pool.length >= 2 ? pool : remoteBatch;
+                        const left = usable[Math.floor(Math.random() * usable.length)];
+                        const rightPool = usable.filter((video) => video.id !== left.id);
+                        const right = rightPool[Math.floor(Math.random() * rightPool.length)];
+                        if (left && right) {
+                            registerVideo(left);
+                            registerVideo(right);
+                            seenThisRun.add(left.id);
+                            seenThisRun.add(right.id);
+                            rememberUsedId(left.id);
+                            rememberUsedId(right.id);
+                            lastLoadError = "";
+                            return [state.videosById[left.id], state.videosById[right.id]];
+                        }
+                    }
+                } catch (err) {
+                    lastLoadError = String(err && err.message ? err.message : err);
+                }
+
+                const forced = await useForcedFallbackPair();
+                if (forced) {
+                    lastLoadError = "";
+                    return forced;
                 }
 
                 return null;
@@ -1144,7 +1219,8 @@
             }
 
             if (!currentPair) {
-                versusArea.innerHTML = '<div class="status">Could not load new videos. Click Skip Matchup to retry.</div>';
+                const errText = lastLoadError ? `<br><small>${escapeHtml(lastLoadError)}</small>` : "";
+                versusArea.innerHTML = `<div class="status">Could not load new videos. Click Skip Matchup to retry.${errText}</div>`;
                 return;
             }
 
@@ -1255,7 +1331,8 @@
 
             try {
                 currentPair = await buildFreshPair();
-            } catch {
+            } catch (err) {
+                lastLoadError = String(err && err.message ? err.message : err);
                 currentPair = await useFallbackPair();
             } finally {
                 isLoadingPair = false;
