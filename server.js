@@ -4,12 +4,15 @@
 //
 // Requirements:
 // - Node.js 18+ (for built-in fetch)
-// - Environment variable YT_API_KEY set to a valid YouTube Data API key
+// - YT_API_KEY set in a .env file (copy .env.example → .env and fill in your key)
+//   or exported as an environment variable before running.
 //
-// Run:
-//   set YT_API_KEY=YOUR_KEY_HERE   (Windows PowerShell: $env:YT_API_KEY="YOUR_KEY_HERE")
-//   node server.js
+// Quick start:
+//   cp .env.example .env        # then edit .env and set YT_API_KEY
+//   npm install
+//   npm start
 
+require("dotenv").config();
 const express = require("express");
 
 if (typeof fetch !== "function") {
