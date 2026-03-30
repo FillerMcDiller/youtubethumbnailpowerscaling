@@ -1,5 +1,17 @@
 const STATE_KEY = "global-state-v1";
 const MAX_MATCH_HISTORY = 250;
+const MAX_RANDOM_RESULTS = 50;
+
+const QUERY_TOPICS = [
+    "cooking", "documentary", "true crime", "space", "history", "engineering", "iceberg explained",
+    "wildlife", "speedrun", "lost media", "weird internet", "horror short film", "math", "physics", "street food", "podcast clips"
+];
+
+const QUERY_MODIFIERS = [
+    "full", "obscure", "viral", "classic", "live", "compilation", "analysis", "extended", "2024", "2025"
+];
+
+const SORT_OPTIONS = ["relevance", "date", "viewCount", "rating"];
 
 const EMPTY_STATE = {
     videosById: {},
@@ -90,6 +102,57 @@ function mapCategoryToGenre(categoryId) {
     return map[String(categoryId)] || "other";
 }
 
+function randomFrom(items) {
+    return items[Math.floor(Math.random() * items.length)];
+}
+
+function buildRandomQuery() {
+    return `${randomFrom(QUERY_MODIFIERS)} ${randomFrom(QUERY_TOPICS)}`;
+}
+
+async function fetchYoutubeVideosByIds(ids, env) {
+    if (!ids.length) {
+        return [];
+    }
+
+    const detailsUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+    detailsUrl.searchParams.set("part", "snippet,statistics");
+    detailsUrl.searchParams.set("id", ids.join(","));
+    detailsUrl.searchParams.set("key", env.YT_API_KEY);
+
+    const detailsResponse = await fetch(detailsUrl.toString());
+    if (!detailsResponse.ok) {
+        const body = await detailsResponse.text().catch(() => "");
+        throw new Error(`videos-list-failed:${detailsResponse.status}:${body}`);
+    }
+
+    const detailsJson = await detailsResponse.json();
+    const items = Array.isArray(detailsJson.items) ? detailsJson.items : [];
+
+    return items.map((item) => {
+        const id = item && item.id ? String(item.id) : "";
+        const snippet = item && item.snippet ? item.snippet : {};
+        const stats = item && item.statistics ? item.statistics : {};
+        const viewCount = Number(stats.viewCount || 0);
+        const likeCount = Number(stats.likeCount || 0);
+
+        return {
+            id,
+            title: snippet.title || `YouTube Video ${id}`,
+            channel: snippet.channelTitle || "Unknown channel",
+            category: "youtube-random",
+            url: `https://www.youtube.com/watch?v=${id}`,
+            language: detectLanguage(snippet),
+            viewCount,
+            likeCount,
+            viewBucket: bucketViewCount(viewCount),
+            ageBucket: bucketAge(snippet.publishedAt),
+            likeDislikeSentiment: bucketSentiment(viewCount, likeCount),
+            genre: mapCategoryToGenre(snippet.categoryId)
+        };
+    }).filter((video) => video.id);
+}
+
 async function readState(env) {
     const raw = await env.POWERSCALING_KV.get(STATE_KEY);
     if (!raw) {
@@ -158,6 +221,44 @@ async function handleVideoMeta(request, env) {
     });
 }
 
+async function handleRandomVideos(request, env) {
+    if (!env.YT_API_KEY) {
+        return jsonResponse({ error: "Missing YT_API_KEY secret" }, 500);
+    }
+
+    const url = new URL(request.url);
+    const requestedLimit = Number(url.searchParams.get("limit") || 30);
+    const limit = Math.max(2, Math.min(MAX_RANDOM_RESULTS, Number.isFinite(requestedLimit) ? requestedLimit : 30));
+
+    const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
+    searchUrl.searchParams.set("part", "snippet");
+    searchUrl.searchParams.set("type", "video");
+    searchUrl.searchParams.set("maxResults", String(Math.min(limit, 50)));
+    searchUrl.searchParams.set("q", buildRandomQuery());
+    searchUrl.searchParams.set("order", randomFrom(SORT_OPTIONS));
+    searchUrl.searchParams.set("safeSearch", "none");
+    searchUrl.searchParams.set("key", env.YT_API_KEY);
+
+    const searchResponse = await fetch(searchUrl.toString());
+    if (!searchResponse.ok) {
+        const body = await searchResponse.text().catch(() => "");
+        return jsonResponse({ error: "YouTube search API error", status: searchResponse.status, body }, 502);
+    }
+
+    const searchJson = await searchResponse.json();
+    const items = Array.isArray(searchJson.items) ? searchJson.items : [];
+    const ids = items
+        .map((item) => item && item.id && item.id.videoId ? String(item.id.videoId) : "")
+        .filter(Boolean);
+
+    try {
+        const videos = await fetchYoutubeVideosByIds(ids, env);
+        return jsonResponse({ videos });
+    } catch (err) {
+        return jsonResponse({ error: "YouTube details API error", details: String(err && err.message ? err.message : err) }, 502);
+    }
+}
+
 export default {
     async fetch(request, env) {
         if (request.method === "OPTIONS") {
@@ -184,6 +285,10 @@ export default {
 
         if (request.method === "GET" && url.pathname === "/api/video-meta") {
             return handleVideoMeta(request, env);
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/random-videos") {
+            return handleRandomVideos(request, env);
         }
 
         return jsonResponse({ error: "Not found" }, 404);

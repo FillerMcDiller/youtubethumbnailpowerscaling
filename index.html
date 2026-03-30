@@ -257,7 +257,7 @@
 <body>
     <div class="wrap">
         <h1>YOUTUBE THUMBNAIL POWERSCALING</h1>
-        <p class="subtitle">Choose the stronger thumbnail. Winner gets +1 power and climbs the bracket. Pool includes viral, gaming, science, cursed, and music chaos.</p>
+        <p class="subtitle">Choose the most auraful thumbnail. Winner goes up by +1 on the rankings. enjoy ^-^</p>
 
         <div class="filters-bar">
             <div class="filter-group">
@@ -817,6 +817,38 @@
             return results;
         }
 
+        async function fetchRemoteBatch() {
+            if (!HAS_REMOTE_API) {
+                return [];
+            }
+
+            const endpoint = apiUrl(`/api/random-videos?limit=${MIN_POOL_BEFORE_FETCH * 2}`);
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error("remote-random-failed");
+            }
+
+            const payload = await response.json();
+            if (!payload || !Array.isArray(payload.videos)) {
+                return [];
+            }
+
+            return payload.videos
+                .filter((video) => video && video.id)
+                .map((video) => ({
+                    id: String(video.id),
+                    title: video.title || `YouTube Video ${video.id}`,
+                    channel: video.channel || "Unknown",
+                    category: video.category || "youtube-random",
+                    url: video.url || `https://www.youtube.com/watch?v=${video.id}`,
+                    genre: video.genre,
+                    viewBucket: video.viewBucket,
+                    language: video.language,
+                    ageBucket: video.ageBucket,
+                    likeDislikeSentiment: video.likeDislikeSentiment
+                }));
+        }
+
         async function refillCandidateQueueIfNeeded() {
             if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
                 return true;
@@ -866,6 +898,22 @@
             };
 
             let addedAny = false;
+
+            if (HAS_REMOTE_API) {
+                try {
+                    const remoteBatch = await fetchRemoteBatch();
+                    addBatch(remoteBatch);
+                    if (remoteBatch.length > 0) {
+                        addedAny = true;
+                    }
+                } catch {
+                    // Continue to browser sources as secondary fallback.
+                }
+
+                if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                    return true;
+                }
+            }
 
             try {
                 const reddit = await fetchRedditBatch();
