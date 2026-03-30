@@ -210,6 +210,8 @@ async function searchYoutubeIds(env, limit, filters = {}) {
     searchUrl.searchParams.set("q", buildRandomQuery(filters));
     searchUrl.searchParams.set("order", randomFrom(SORT_OPTIONS));
     searchUrl.searchParams.set("safeSearch", "none");
+    searchUrl.searchParams.set("videoEmbeddable", "true");
+    searchUrl.searchParams.set("videoSyndicated", "true");
     searchUrl.searchParams.set("regionCode", randomFrom(REGION_OPTIONS));
     searchUrl.searchParams.set("key", env.YT_API_KEY);
 
@@ -233,7 +235,7 @@ async function fetchYoutubeVideosByIds(ids, env) {
     }
 
     const detailsUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
-    detailsUrl.searchParams.set("part", "snippet,statistics");
+    detailsUrl.searchParams.set("part", "snippet,statistics,status");
     detailsUrl.searchParams.set("id", ids.join(","));
     detailsUrl.searchParams.set("key", env.YT_API_KEY);
 
@@ -250,6 +252,7 @@ async function fetchYoutubeVideosByIds(ids, env) {
         const id = item && item.id ? String(item.id) : "";
         const snippet = item && item.snippet ? item.snippet : {};
         const stats = item && item.statistics ? item.statistics : {};
+        const status = item && item.status ? item.status : {};
         const viewCount = Number(stats.viewCount || 0);
         const likeCount = Number(stats.likeCount || 0);
 
@@ -266,9 +269,26 @@ async function fetchYoutubeVideosByIds(ids, env) {
             viewBucket: bucketViewCount(viewCount),
             ageBucket: bucketAge(snippet.publishedAt),
             likeDislikeSentiment: bucketSentiment(viewCount, likeCount),
-            genre: mapCategoryToGenre(snippet.categoryId)
+            genre: mapCategoryToGenre(snippet.categoryId),
+            embeddable: Boolean(status.embeddable),
+            privacyStatus: status.privacyStatus || "",
+            uploadStatus: status.uploadStatus || ""
         };
-    }).filter((video) => video.id);
+    }).filter((video) => {
+        if (!video.id) {
+            return false;
+        }
+        if (!video.embeddable) {
+            return false;
+        }
+        if (video.privacyStatus && video.privacyStatus !== "public") {
+            return false;
+        }
+        if (video.uploadStatus && video.uploadStatus !== "processed") {
+            return false;
+        }
+        return true;
+    });
 }
 
 async function readState(env) {
