@@ -484,7 +484,7 @@
             // The following filters require real stats (views, language, age, likes).
             // In file:// offline mode we can't query YouTube APIs, so they are
             // treated as "Any" regardless of the dropdown settings.
-            if (!IS_FILE_MODE) {
+            if (HAS_METADATA_API) {
                 // View count buckets (string bucket, e.g. "1m_10m")
                 if (activeFilters.views !== "any") {
                     const bucket = video.viewBucket || null;
@@ -854,7 +854,7 @@
                 return true;
             }
 
-            if (HAS_METADATA_API) {
+            if (!HAS_METADATA_API) {
                 const usedIds = buildUsedIdSet();
                 const queueIds = new Set(candidateQueue.map((video) => video.id));
 
