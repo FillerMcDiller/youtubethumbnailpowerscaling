@@ -358,6 +358,14 @@
             ? RUNTIME_CONFIG.apiBase.replace(/\/+$/, "")
             : "";
         const HAS_REMOTE_API = REMOTE_API_BASE.length > 0;
+        
+        // Debug logging to help diagnose config issues
+        console.log("[PowerScaling Config Debug]", {
+            IS_GITHUB_PAGES,
+            REMOTE_API_BASE,
+            HAS_REMOTE_API,
+            CONFIG: RUNTIME_CONFIG
+        });
         const HAS_METADATA_API = HAS_REMOTE_API || (!IS_FILE_MODE && !IS_GITHUB_PAGES);
         const ALLOW_LOCAL_FALLBACK = RUNTIME_CONFIG.allowLocalFallback !== false;
         const REQUIRE_REMOTE_ON_GH_PAGES = IS_GITHUB_PAGES && !HAS_REMOTE_API;
