@@ -1111,7 +1111,12 @@
                     }
                 }
 
-                return null;
+                if (!ALLOW_LOCAL_FALLBACK) {
+                    return null;
+                }
+
+                // Remote API is configured but unavailable; continue with local
+                // browser source fallback instead of hard-failing the matchup.
             }
 
             for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {

@@ -452,6 +452,9 @@ async function handleRandomPair(request, env) {
     let fetchErrorCount = 0;
     let totalFetched = 0;
     let filteredOut = 0;
+    let lastSearchError = "";
+    let lastFetchError = "";
+    let quotaExceeded = false;
 
     // First pass: strict filtering (embeddable + public + processed)
     for (let attempt = 0; attempt < MAX_PAIR_ATTEMPTS; attempt += 1) {
@@ -460,6 +463,11 @@ async function handleRandomPair(request, env) {
             ids = await searchYoutubeIds(env, SEARCH_BATCH_SIZE, filters);
         } catch (err) {
             searchErrorCount++;
+            lastSearchError = String(err && err.message ? err.message : err);
+            if (/quotaExceeded|dailyLimitExceeded/i.test(lastSearchError)) {
+                quotaExceeded = true;
+                break;
+            }
             continue;
         }
 
@@ -472,6 +480,7 @@ async function handleRandomPair(request, env) {
             videos = await fetchYoutubeVideosByIds(ids, env, true);
         } catch (err) {
             fetchErrorCount++;
+            lastFetchError = String(err && err.message ? err.message : err);
             continue;
         }
 
@@ -499,13 +508,18 @@ async function handleRandomPair(request, env) {
     }
 
     // If not enough candidates found in strict mode, do lenient pass
-    if (candidatesById.size < 2) {
+    if (candidatesById.size < 2 && !quotaExceeded) {
         for (let attempt = 0; attempt < 6; attempt += 1) {
             let ids = [];
             try {
                 ids = await searchYoutubeIds(env, SEARCH_BATCH_SIZE, filters);
             } catch (err) {
                 searchErrorCount++;
+                lastSearchError = String(err && err.message ? err.message : err);
+                if (/quotaExceeded|dailyLimitExceeded/i.test(lastSearchError)) {
+                    quotaExceeded = true;
+                    break;
+                }
                 continue;
             }
 
@@ -518,6 +532,7 @@ async function handleRandomPair(request, env) {
                 videos = await fetchYoutubeVideosByIds(ids, env, false);
             } catch (err) {
                 fetchErrorCount++;
+                lastFetchError = String(err && err.message ? err.message : err);
                 continue;
             }
 
@@ -547,6 +562,38 @@ async function handleRandomPair(request, env) {
 
     const candidates = Array.from(candidatesById.values());
     if (candidates.length < 2) {
+        if (quotaExceeded) {
+            return jsonResponse({
+                error: "YouTube quota exceeded",
+                hint: "This API key is currently out of YouTube Data API quota. Wait for daily reset or switch to a different key/project.",
+                filters,
+                candidateCount: candidates.length,
+                diagnostics: {
+                    searchErrors: searchErrorCount,
+                    fetchErrors: fetchErrorCount,
+                    totalFetched,
+                    filteredOut,
+                    lastSearchError
+                }
+            }, 429);
+        }
+
+        if (searchErrorCount > 0 && totalFetched === 0) {
+            return jsonResponse({
+                error: "YouTube search API unavailable",
+                hint: "Verify YT_API_KEY via 'wrangler secret put YT_API_KEY', ensure YouTube Data API v3 is enabled, and remove HTTP referrer/IP restrictions for server-side worker usage.",
+                filters,
+                candidateCount: candidates.length,
+                diagnostics: {
+                    searchErrors: searchErrorCount,
+                    fetchErrors: fetchErrorCount,
+                    totalFetched,
+                    filteredOut,
+                    lastSearchError
+                }
+            }, 502);
+        }
+
         return jsonResponse({
             error: "Not enough matching videos right now",
             filters,
@@ -555,7 +602,9 @@ async function handleRandomPair(request, env) {
                 searchErrors: searchErrorCount,
                 fetchErrors: fetchErrorCount,
                 totalFetched,
-                filteredOut
+                filteredOut,
+                lastSearchError,
+                lastFetchError
             }
         }, 404);
     }
