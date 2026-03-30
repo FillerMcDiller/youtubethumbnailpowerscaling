@@ -316,7 +316,6 @@
                 <div class="versus" id="versusArea"></div>
                 <div class="controls">
                     <button class="control-btn" id="skipBtn" type="button">Skip Matchup</button>
-                    <button class="control-btn reset" id="resetBtn" type="button">Reset Powerscaling</button>
                 </div>
             </section>
 
@@ -408,7 +407,6 @@
         const leaderboardEl = document.getElementById("leaderboard");
         const bracketFeedEl = document.getElementById("bracketFeed");
         const skipBtn = document.getElementById("skipBtn");
-        const resetBtn = document.getElementById("resetBtn");
         const subtitleEl = document.querySelector(".subtitle");
 
         const genreFilterEl = document.getElementById("genreFilter");
@@ -1027,7 +1025,6 @@
             const hydrated = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
             rememberUsedId(hydrated[0] && hydrated[0].id);
             rememberUsedId(hydrated[1] && hydrated[1].id);
-            await saveState();
             return hydrated;
         }
 
@@ -1054,7 +1051,6 @@
                         seenThisRun.add(right.id);
                         rememberUsedId(left.id);
                         rememberUsedId(right.id);
-                        await saveState();
                         return [left, right];
                     } catch {
                         // Retry with a fresh remote query.
@@ -1083,7 +1079,6 @@
                 seenThisRun.add(right.id);
                 rememberUsedId(left.id);
                 rememberUsedId(right.id);
-                await saveState();
                 return hydratedPair;
             }
 
@@ -1098,7 +1093,6 @@
                 seenThisRun.add(right.id);
                 rememberUsedId(left.id);
                 rememberUsedId(right.id);
-                await saveState();
                 return hydratedPair;
             }
 
@@ -1221,7 +1215,6 @@
         async function queueNextMatchup() {
             isLoadingPair = true;
             skipBtn.disabled = true;
-            resetBtn.disabled = true;
             renderMatchup();
 
             try {
@@ -1231,7 +1224,6 @@
             } finally {
                 isLoadingPair = false;
                 skipBtn.disabled = false;
-                resetBtn.disabled = false;
                 paint();
             }
         }
@@ -1254,15 +1246,11 @@
                 state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
             }
 
-            await saveState();
-            await queueNextMatchup();
-        }
-
-        async function resetAll() {
-            state = { videosById: {}, powers: {}, matches: [], usedIds: [] };
-            candidateQueue = [];
-            seenThisRun = new Set();
-            await saveState();
+            try {
+                await saveState();
+            } catch {
+                // Keep gameplay moving even if persistence is temporarily unavailable.
+            }
             await queueNextMatchup();
         }
 
@@ -1296,16 +1284,6 @@
                 return;
             }
             await queueNextMatchup();
-        });
-
-        resetBtn.addEventListener("click", async () => {
-            if (isLoadingPair) {
-                return;
-            }
-            const shouldReset = window.confirm("Reset all powers and clear bracket history?");
-            if (shouldReset) {
-                await resetAll();
-            }
         });
 
         if (genreFilterEl) genreFilterEl.addEventListener("change", handleFilterChange);
