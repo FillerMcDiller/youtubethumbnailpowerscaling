@@ -849,6 +849,38 @@
                 }));
         }
 
+        async function fetchRemotePair(excludedSet = new Set()) {
+            if (!HAS_REMOTE_API) {
+                return null;
+            }
+
+            const params = new URLSearchParams({
+                genre: activeFilters.genre,
+                views: activeFilters.views,
+                language: activeFilters.language,
+                age: activeFilters.age,
+                likes: activeFilters.likes
+            });
+
+            const excluded = Array.from(excludedSet).slice(-350);
+            if (excluded.length > 0) {
+                params.set("excluded", excluded.join(","));
+            }
+
+            const endpoint = apiUrl(`/api/random-pair?${params.toString()}`);
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error("remote-pair-failed");
+            }
+
+            const payload = await response.json();
+            if (!payload || !Array.isArray(payload.pair) || payload.pair.length < 2) {
+                throw new Error("remote-pair-invalid");
+            }
+
+            return payload.pair;
+        }
+
         async function refillCandidateQueueIfNeeded() {
             if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
                 return true;
@@ -1000,6 +1032,38 @@
         }
 
         async function buildFreshPair() {
+            if (HAS_REMOTE_API) {
+                const excluded = buildUsedIdSet();
+                for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
+                    try {
+                        const pair = await fetchRemotePair(excluded);
+                        const leftRaw = pair[0];
+                        const rightRaw = pair[1];
+
+                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
+                            continue;
+                        }
+
+                        registerVideo(leftRaw);
+                        registerVideo(rightRaw);
+
+                        const left = state.videosById[leftRaw.id];
+                        const right = state.videosById[rightRaw.id];
+
+                        seenThisRun.add(left.id);
+                        seenThisRun.add(right.id);
+                        rememberUsedId(left.id);
+                        rememberUsedId(right.id);
+                        await saveState();
+                        return [left, right];
+                    } catch {
+                        // Retry with a fresh remote query.
+                    }
+                }
+
+                return null;
+            }
+
             for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
                 await refillCandidateQueueIfNeeded();
 
