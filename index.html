@@ -335,7 +335,8 @@
     <script src="config.js"></script>
     <script>
         window.__POWERSCALING_CONFIG__ = {
-            apiBase: "",
+            // Safe default for this deployment; config.js can still override it.
+            apiBase: "https://yt-powerscaling-api.youtubepowerscaling.workers.dev",
             allowLocalFallback: true,
             ...(window.__POWERSCALING_CONFIG__ || {})
         };
