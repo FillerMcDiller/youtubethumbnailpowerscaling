@@ -914,6 +914,13 @@
 
                 const hydratedPair = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
 
+                // Re-check filters now that real metadata has been loaded; the
+                // pre-selection check is intentionally permissive for unhydrated
+                // videos, so this second pass is needed to enforce the filters.
+                if (!matchesFilters(hydratedPair[0]) || !matchesFilters(hydratedPair[1])) {
+                    continue;
+                }
+
                 seenThisRun.add(left.id);
                 seenThisRun.add(right.id);
                 rememberUsedId(left.id);
@@ -929,12 +936,17 @@
             const right = getNextUnseenVideo(left ? new Set([left.id]) : new Set());
             if (left && right) {
                 const hydratedPair = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
-                seenThisRun.add(left.id);
-                seenThisRun.add(right.id);
-                rememberUsedId(left.id);
-                rememberUsedId(right.id);
-                saveState();
-                return hydratedPair;
+                // Same post-hydration filter check on the final-attempt path.
+                // If this pair doesn't match, fall through to useFallbackPair
+                // which has its own matchesFilters selection on known videos.
+                if (matchesFilters(hydratedPair[0]) && matchesFilters(hydratedPair[1])) {
+                    seenThisRun.add(left.id);
+                    seenThisRun.add(right.id);
+                    rememberUsedId(left.id);
+                    rememberUsedId(right.id);
+                    saveState();
+                    return hydratedPair;
+                }
             }
 
             return await useFallbackPair();
