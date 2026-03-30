@@ -1,0 +1,10 @@
+# Environment variables — never commit your real .env file
+.env
+.env.local
+.env.*.local
+
+# Node dependencies
+node_modules/
+
+# macOS
+.DS_Store
