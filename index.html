@@ -4,21 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Youtube Thumbnail Powerscaling</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #0f1722;
-            --bg-mid: #132033;
-            --panel: rgba(14, 24, 36, 0.82);
-            --line: rgba(255, 255, 255, 0.12);
-            --text: #f1f6fb;
-            --muted: #a8bccf;
-            --hot: #ff7a18;
-            --cold: #0bb3ff;
-            --win: #8be46d;
-            --danger: #ff5a7a;
+            --bg: #f8f8f1;
+            --panel: #ffffff;
+            --line: #d9d9c8;
+            --text: #1c1c1c;
+            --muted: #66664f;
+            --left: #ffe082;
+            --right: #80deea;
+            --danger: #ffcdd2;
+            --winner: #c5e1a5;
         }
 
         * {
@@ -28,26 +24,23 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Space Grotesk", sans-serif;
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
             color: var(--text);
-            background:
-                radial-gradient(circle at 15% 15%, rgba(255, 122, 24, 0.25) 0%, transparent 35%),
-                radial-gradient(circle at 85% 10%, rgba(11, 179, 255, 0.28) 0%, transparent 30%),
-                linear-gradient(135deg, var(--bg-dark), var(--bg-mid));
-            padding: 22px;
+            background: radial-gradient(circle at 10% 10%, #fff9c4, transparent 35%),
+                radial-gradient(circle at 90% 8%, #b3e5fc, transparent 30%),
+                var(--bg);
+            padding: 16px;
         }
 
         .wrap {
-            width: min(1200px, 100%);
+            width: min(1100px, 100%);
             margin: 0 auto;
         }
 
         h1 {
             margin: 0;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.6px;
-            font-size: clamp(2.2rem, 5vw, 4rem);
-            line-height: 0.9;
+            font-size: clamp(1.9rem, 4.8vw, 2.8rem);
+            line-height: 1;
         }
 
         .subtitle {
@@ -56,88 +49,63 @@
         }
 
         .board {
-            margin-top: 18px;
+            margin-top: 14px;
             display: grid;
-            grid-template-columns: 1.8fr 1fr;
-            gap: 16px;
+            grid-template-columns: 1.7fr 1fr;
+            gap: 12px;
         }
 
         .filters-bar {
             margin-top: 14px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px 16px;
+            gap: 10px;
             align-items: flex-end;
         }
 
         .filter-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
             min-width: 140px;
         }
 
         .filter-label {
             font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
             color: var(--muted);
         }
 
         .filter-select {
-            border-radius: 999px;
+            border-radius: 8px;
             border: 1px solid var(--line);
-            background: rgba(10, 18, 30, 0.9);
+            background: #fffef8;
             color: var(--text);
-            padding: 4px 10px;
-            font-size: 0.85rem;
+            padding: 6px 8px;
+            font-size: 0.9rem;
             font-family: inherit;
         }
 
         .panel {
-            border: 1px solid var(--line);
+            border: 2px dashed var(--line);
             background: var(--panel);
-            border-radius: 18px;
-            padding: 14px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 12px;
         }
 
         .versus {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
             align-items: stretch;
-            gap: 12px;
+            gap: 10px;
         }
 
         .video-card {
             display: flex;
             flex-direction: column;
             border: 1px solid var(--line);
-            border-radius: 14px;
+            border-radius: 10px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.03);
-            transform: translateY(18px);
-            opacity: 0;
-            animation: rise-in 350ms ease forwards;
-        }
-
-        .video-card:nth-child(3) {
-            animation-delay: 80ms;
-        }
-
-        @keyframes rise-in {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .thumb {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            object-fit: cover;
-            display: block;
+            background: #fffef8;
         }
 
         .video-frame {
@@ -155,7 +123,6 @@
         .video-title {
             margin: 0 0 8px;
             font-size: 1rem;
-            font-weight: 700;
         }
 
         .video-meta {
@@ -165,90 +132,74 @@
         }
 
         .video-link {
-            color: #a9dfff;
-            text-decoration: none;
+            color: #005f8f;
+            text-decoration: underline;
             font-size: 0.84rem;
             word-break: break-all;
         }
 
-        .video-link:hover {
-            text-decoration: underline;
-        }
-
         .choose-btn {
-            margin-top: 10px;
-            border: 0;
-            border-radius: 10px;
-            padding: 10px 12px;
+            margin-top: 8px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 8px 10px;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
-            color: #0f1722;
-            background: linear-gradient(90deg, var(--hot), #ffb84d);
-            transition: transform 120ms ease, filter 120ms ease;
-        }
-
-        .choose-btn:hover {
-            transform: translateY(-1px);
-            filter: saturate(1.12);
+            color: #222;
+            background: var(--left);
         }
 
         .choose-btn.right {
-            background: linear-gradient(90deg, var(--cold), #8be1ff);
+            background: var(--right);
         }
 
         .vs-pill {
             align-self: center;
-            background: #0f1722;
             border: 1px solid var(--line);
             color: var(--muted);
             border-radius: 999px;
-            padding: 7px 12px;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.4px;
-            font-size: 1.1rem;
+            padding: 6px 10px;
+            font-size: 0.95rem;
+            background: #fffef8;
         }
 
         .controls {
             display: flex;
-            gap: 10px;
-            margin-top: 12px;
+            gap: 8px;
+            margin-top: 10px;
             flex-wrap: wrap;
         }
 
         .control-btn {
             border: 1px solid var(--line);
             color: var(--text);
-            background: #152538;
-            border-radius: 10px;
-            padding: 8px 12px;
+            background: #fffef8;
+            border-radius: 8px;
+            padding: 7px 10px;
             font-family: inherit;
             cursor: pointer;
         }
 
         .control-btn.reset {
-            border-color: rgba(255, 90, 122, 0.5);
-            color: #ffd9e1;
-            background: rgba(255, 90, 122, 0.14);
+            background: var(--danger);
         }
 
         .stats-title {
             margin-top: 0;
             margin-bottom: 8px;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.2px;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
         }
 
         .leader-item,
         .match-item {
             display: grid;
-            gap: 6px;
+            gap: 4px;
             border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 8px 10px;
+            border-radius: 8px;
+            padding: 8px;
             margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.03);
+            background: #fffef8;
         }
 
         .leader-item {
@@ -263,8 +214,11 @@
         }
 
         .power {
-            color: var(--win);
+            color: #2e7d32;
             font-weight: 700;
+            background: var(--winner);
+            border-radius: 999px;
+            padding: 2px 8px;
         }
 
         .match-item small {
@@ -278,10 +232,11 @@
 
         .status {
             border: 1px dashed var(--line);
-            border-radius: 10px;
-            padding: 14px;
+            border-radius: 8px;
+            padding: 12px;
             text-align: center;
             color: var(--muted);
+            background: #fffef8;
         }
 
         @media (max-width: 960px) {
@@ -377,6 +332,15 @@
         </section>
     </div>
 
+    <script src="config.js"></script>
+    <script>
+        window.__POWERSCALING_CONFIG__ = {
+            apiBase: "",
+            allowLocalFallback: true,
+            ...(window.__POWERSCALING_CONFIG__ || {})
+        };
+    </script>
+
     <script>
         const STORAGE_KEY = "yt-thumbnail-powerscaling-v5";
         const MAX_FEED_ITEMS = 24;
@@ -385,6 +349,15 @@
         const MIN_POOL_BEFORE_FETCH = 30;
         const FETCH_ATTEMPTS_PER_PAIR = 6;
         const IS_FILE_MODE = window.location.protocol === "file:";
+        const IS_GITHUB_PAGES = window.location.hostname.endsWith(".github.io");
+        const RUNTIME_CONFIG = window.__POWERSCALING_CONFIG__ || {};
+        const REMOTE_API_BASE = typeof RUNTIME_CONFIG.apiBase === "string"
+            ? RUNTIME_CONFIG.apiBase.replace(/\/+$/, "")
+            : "";
+        const HAS_REMOTE_API = REMOTE_API_BASE.length > 0;
+        const HAS_METADATA_API = HAS_REMOTE_API || (!IS_FILE_MODE && !IS_GITHUB_PAGES);
+        const ALLOW_LOCAL_FALLBACK = RUNTIME_CONFIG.allowLocalFallback !== false;
+        const REQUIRE_REMOTE_ON_GH_PAGES = IS_GITHUB_PAGES && !HAS_REMOTE_API;
 
         const REDDIT_SOURCES = [
             "videos", "deepintoyoutube", "youtubehaiku", "ObscureMedia", "Documentaries", "crazyvideos", "nextfuckinglevel", "gaming"
@@ -435,6 +408,7 @@
         const bracketFeedEl = document.getElementById("bracketFeed");
         const skipBtn = document.getElementById("skipBtn");
         const resetBtn = document.getElementById("resetBtn");
+        const subtitleEl = document.querySelector(".subtitle");
 
         const genreFilterEl = document.getElementById("genreFilter");
         const viewsFilterEl = document.getElementById("viewsFilter");
@@ -442,7 +416,9 @@
         const ageFilterEl = document.getElementById("ageFilter");
         const likesFilterEl = document.getElementById("likesFilter");
 
-        let state = loadState();
+        const EMPTY_STATE = { videosById: {}, powers: {}, matches: [], usedIds: [] };
+
+        let state = { ...EMPTY_STATE };
         let currentPair = null;
         let isLoadingPair = false;
         let candidateQueue = [];
@@ -511,14 +487,17 @@
                 // View count buckets (string bucket, e.g. "1m_10m")
                 if (activeFilters.views !== "any") {
                     const bucket = video.viewBucket || null;
-                    if (bucket && bucket !== activeFilters.views) {
+                    if (!bucket || bucket !== activeFilters.views) {
                         return false;
                     }
                 }
 
                 // Language (expects language code like "en" or "non_en")
                 if (activeFilters.language !== "any") {
-                    const lang = (video.language || "en").toLowerCase();
+                    const lang = (video.language || "").toLowerCase();
+                    if (!lang) {
+                        return false;
+                    }
                     const isEnglish = lang.startsWith("en");
                     if (activeFilters.language === "en" && !isEnglish) return false;
                     if (activeFilters.language === "non_en" && isEnglish) return false;
@@ -527,14 +506,14 @@
                 // Age buckets (string bucket, e.g. "5_10y")
                 if (activeFilters.age !== "any") {
                     const bucket = video.ageBucket || null;
-                    if (bucket && bucket !== activeFilters.age) {
+                    if (!bucket || bucket !== activeFilters.age) {
                         return false;
                     }
                 }
 
                 // Likes/dislikes sentiment (expects likeDislikeSentiment string when available)
-                if (activeFilters.likes !== "any" && video.likeDislikeSentiment) {
-                    if (video.likeDislikeSentiment !== activeFilters.likes) {
+                if (activeFilters.likes !== "any") {
+                    if (!video.likeDislikeSentiment || video.likeDislikeSentiment !== activeFilters.likes) {
                         return false;
                     }
                 }
@@ -543,27 +522,90 @@
             return true;
         }
 
-        function loadState() {
+        function normalizeState(parsed) {
+            return {
+                videosById: parsed && parsed.videosById && typeof parsed.videosById === "object" ? parsed.videosById : {},
+                powers: parsed && parsed.powers && typeof parsed.powers === "object" ? parsed.powers : {},
+                matches: parsed && Array.isArray(parsed.matches) ? parsed.matches : [],
+                usedIds: parsed && Array.isArray(parsed.usedIds) ? parsed.usedIds : []
+            };
+        }
+
+        function apiUrl(path) {
+            return HAS_REMOTE_API ? `${REMOTE_API_BASE}${path}` : path;
+        }
+
+        function loadLocalState() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY);
                 if (!raw) {
-                    return { videosById: {}, powers: {}, matches: [], usedIds: [] };
+                    return { ...EMPTY_STATE };
                 }
-
-                const parsed = JSON.parse(raw);
-                return {
-                    videosById: parsed.videosById && typeof parsed.videosById === "object" ? parsed.videosById : {},
-                    powers: parsed.powers && typeof parsed.powers === "object" ? parsed.powers : {},
-                    matches: Array.isArray(parsed.matches) ? parsed.matches : [],
-                    usedIds: Array.isArray(parsed.usedIds) ? parsed.usedIds : []
-                };
+                return normalizeState(JSON.parse(raw));
             } catch {
-                return { videosById: {}, powers: {}, matches: [], usedIds: [] };
+                return { ...EMPTY_STATE };
             }
         }
 
-        function saveState() {
+        function saveLocalState() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        async function loadState() {
+            const localState = loadLocalState();
+
+            if (REQUIRE_REMOTE_ON_GH_PAGES && !ALLOW_LOCAL_FALLBACK) {
+                return { ...EMPTY_STATE };
+            }
+
+            if (IS_FILE_MODE) {
+                return localState;
+            }
+
+            try {
+                const response = await fetch(apiUrl("/api/state"), { cache: "no-store" });
+                if (!response.ok) {
+                    return localState;
+                }
+                const payload = await response.json();
+                const normalized = normalizeState(payload);
+                normalized.usedIds = [];
+                return normalized;
+            } catch {
+                if (REQUIRE_REMOTE_ON_GH_PAGES && !ALLOW_LOCAL_FALLBACK) {
+                    return { ...EMPTY_STATE };
+                }
+                return localState;
+            }
+        }
+
+        async function saveState() {
+            if (IS_FILE_MODE) {
+                saveLocalState();
+                return;
+            }
+
+            try {
+                const response = await fetch(apiUrl("/api/state"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        videosById: state.videosById,
+                        powers: state.powers,
+                        matches: state.matches,
+                        usedIds: []
+                    })
+                });
+                if (!response.ok) {
+                    throw new Error("remote-state-save-failed");
+                }
+            } catch {
+                if (REQUIRE_REMOTE_ON_GH_PAGES && !ALLOW_LOCAL_FALLBACK) {
+                    throw new Error("remote-state-required");
+                }
+                // Keep app interactive if persistence endpoint is unavailable.
+                saveLocalState();
+            }
         }
 
         function rememberUsedId(videoId) {
@@ -614,7 +656,7 @@
             // In local file mode, skip external metadata fetches entirely to avoid
             // long stalls or timeouts behind VPNs/proxies. Just register with
             // whatever basic info we already have.
-            if (IS_FILE_MODE) {
+            if (!HAS_METADATA_API) {
                 registerVideo(video);
                 return state.videosById[video.id];
             }
@@ -631,7 +673,7 @@
             }
 
             try {
-                const endpoint = `/api/video-meta?id=${encodeURIComponent(video.id)}`;
+                const endpoint = apiUrl(`/api/video-meta?id=${encodeURIComponent(video.id)}`);
                 const response = await fetch(endpoint, { cache: "no-store" });
                 if (!response.ok) {
                     throw new Error("metadata-unavailable");
@@ -779,7 +821,7 @@
                 return true;
             }
 
-            if (IS_FILE_MODE) {
+            if (HAS_METADATA_API) {
                 const usedIds = buildUsedIdSet();
                 const queueIds = new Set(candidateQueue.map((video) => video.id));
 
@@ -847,15 +889,21 @@
             return addedAny || candidateQueue.length > 0;
         }
 
-        function getNextUnseenVideo(excluded = new Set()) {
+        async function getNextUnseenVideo(excluded = new Set()) {
             const usedSet = buildUsedIdSet();
             while (candidateQueue.length > 0) {
                 const next = candidateQueue.shift();
-                if (!next || excluded.has(next.id) || usedSet.has(next.id) || !matchesFilters(next)) {
+                if (!next || excluded.has(next.id) || usedSet.has(next.id)) {
                     continue;
                 }
-                registerVideo(next);
-                return next;
+
+                const hydrated = await hydrateVideoMetadata(next);
+                if (!matchesFilters(hydrated)) {
+                    continue;
+                }
+
+                registerVideo(hydrated);
+                return hydrated;
             }
             return null;
         }
@@ -894,7 +942,7 @@
             const hydrated = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
             rememberUsedId(hydrated[0] && hydrated[0].id);
             rememberUsedId(hydrated[1] && hydrated[1].id);
-            saveState();
+            await saveState();
             return hydrated;
         }
 
@@ -902,12 +950,12 @@
             for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
                 await refillCandidateQueueIfNeeded();
 
-                const left = getNextUnseenVideo();
+                const left = await getNextUnseenVideo();
                 if (!left) {
                     continue;
                 }
 
-                const right = getNextUnseenVideo(new Set([left.id]));
+                const right = await getNextUnseenVideo(new Set([left.id]));
                 if (!right) {
                     continue;
                 }
@@ -918,22 +966,22 @@
                 seenThisRun.add(right.id);
                 rememberUsedId(left.id);
                 rememberUsedId(right.id);
-                saveState();
+                await saveState();
                 return hydratedPair;
             }
 
             seenThisRun = new Set();
             await refillCandidateQueueIfNeeded();
 
-            const left = getNextUnseenVideo();
-            const right = getNextUnseenVideo(left ? new Set([left.id]) : new Set());
+            const left = await getNextUnseenVideo();
+            const right = await getNextUnseenVideo(left ? new Set([left.id]) : new Set());
             if (left && right) {
                 const hydratedPair = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
                 seenThisRun.add(left.id);
                 seenThisRun.add(right.id);
                 rememberUsedId(left.id);
                 rememberUsedId(right.id);
-                saveState();
+                await saveState();
                 return hydratedPair;
             }
 
@@ -942,8 +990,8 @@
 
         function renderMatchup() {
             if (isLoadingPair) {
-                versusArea.innerHTML = IS_FILE_MODE
-                    ? '<div class="status">Local mode: picking two fresh videos from a large offline pool...</div>'
+                versusArea.innerHTML = !HAS_METADATA_API
+                    ? '<div class="status">Picking two fresh videos from the pool...</div>'
                     : '<div class="status">Fetching two new random YouTube videos...</div>';
                 return;
             }
@@ -956,14 +1004,14 @@
             const left = currentPair[0];
             const right = currentPair[1];
 
-            const leftSourceLabel = IS_FILE_MODE && (left.channel === "Offline pool" || left.category === "fallback")
+            const leftSourceLabel = !HAS_METADATA_API && (left.channel === "Offline pool" || left.category === "fallback")
                 ? "Offline pool"
                 : (left.channel || "Unknown channel");
-            const rightSourceLabel = IS_FILE_MODE && (right.channel === "Offline pool" || right.category === "fallback")
+            const rightSourceLabel = !HAS_METADATA_API && (right.channel === "Offline pool" || right.category === "fallback")
                 ? "Offline pool"
                 : (right.channel || "Unknown channel");
-            const leftCategoryLabel = IS_FILE_MODE && left.category === "fallback" ? "offline" : (left.category || "misc");
-            const rightCategoryLabel = IS_FILE_MODE && right.category === "fallback" ? "offline" : (right.category || "misc");
+            const leftCategoryLabel = !HAS_METADATA_API && left.category === "fallback" ? "offline" : (left.category || "misc");
+            const rightCategoryLabel = !HAS_METADATA_API && right.category === "fallback" ? "offline" : (right.category || "misc");
 
             versusArea.innerHTML = `
                 <article class="video-card">
@@ -1089,7 +1137,7 @@
                 state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
             }
 
-            saveState();
+            await saveState();
             await queueNextMatchup();
         }
 
@@ -1097,7 +1145,7 @@
             state = { videosById: {}, powers: {}, matches: [], usedIds: [] };
             candidateQueue = [];
             seenThisRun = new Set();
-            saveState();
+            await saveState();
             await queueNextMatchup();
         }
 
@@ -1152,15 +1200,31 @@
         // In offline file mode, advanced filters (views/language/age/likes) can't
         // be enforced because the app has no access to real YouTube stats.
         // Keep the UI visible but make it clear they effectively behave as "Any".
-        if (IS_FILE_MODE) {
+        if (!HAS_METADATA_API) {
             if (viewsFilterEl) viewsFilterEl.title = "View filters require online stats; in file mode they behave as Any.";
             if (languageFilterEl) languageFilterEl.title = "Language filters require online stats; in file mode they behave as Any.";
             if (ageFilterEl) ageFilterEl.title = "Age filters require online stats; in file mode they behave as Any.";
             if (likesFilterEl) likesFilterEl.title = "Likes/dislikes filters require online stats; in file mode they behave as Any.";
         }
 
-        paint();
-        queueNextMatchup();
+        if (IS_GITHUB_PAGES && !HAS_REMOTE_API && subtitleEl) {
+            subtitleEl.textContent = `${subtitleEl.textContent} Configure apiBase in config.js to enable global leaderboard and bracket on GitHub Pages.`;
+        }
+
+        async function bootstrap() {
+            if (REQUIRE_REMOTE_ON_GH_PAGES && !ALLOW_LOCAL_FALLBACK) {
+                versusArea.innerHTML = '<div class="status">Global mode is required. Set apiBase in config.js to your deployed API URL.</div>';
+                leaderboardEl.innerHTML = '<p class="empty">Global state unavailable until apiBase is configured.</p>';
+                bracketFeedEl.innerHTML = '<p class="empty">Global state unavailable until apiBase is configured.</p>';
+                return;
+            }
+
+            state = await loadState();
+            paint();
+            await queueNextMatchup();
+        }
+
+        bootstrap();
     </script>
 </body>
 

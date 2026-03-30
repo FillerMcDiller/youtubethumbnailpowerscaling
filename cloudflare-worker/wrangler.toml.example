@@ -1,0 +1,10 @@
+name = "yt-powerscaling-api"
+main = "index.js"
+compatibility_date = "2026-03-30"
+
+[[kv_namespaces]]
+binding = "POWERSCALING_KV"
+id = "REPLACE_WITH_PRODUCTION_KV_NAMESPACE_ID"
+
+# Set this secret after deployment setup:
+# wrangler secret put YT_API_KEY

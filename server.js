@@ -14,6 +14,8 @@
 
 require("dotenv").config();
 const express = require("express");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 
 if (typeof fetch !== "function") {
     throw new Error("This server requires Node 18+ for global fetch.");
@@ -22,11 +24,49 @@ if (typeof fetch !== "function") {
 const app = express();
 const PORT = process.env.PORT || 4173;
 const API_KEY = process.env.YT_API_KEY;
+const GLOBAL_STATE_FILE = path.join(__dirname, "global-state.json");
+
+const EMPTY_STATE = {
+    videosById: {},
+    powers: {},
+    matches: [],
+    usedIds: []
+};
 
 // In-memory cache to avoid hammering the API for repeated IDs.
 const metaCache = new Map();
 
 app.use(express.static(__dirname));
+app.use(express.json({ limit: "1mb" }));
+
+function normalizeState(input) {
+    return {
+        videosById: input && input.videosById && typeof input.videosById === "object" ? input.videosById : {},
+        powers: input && input.powers && typeof input.powers === "object" ? input.powers : {},
+        matches: input && Array.isArray(input.matches) ? input.matches : [],
+        usedIds: input && Array.isArray(input.usedIds) ? input.usedIds : []
+    };
+}
+
+async function readGlobalState() {
+    try {
+        const raw = await fs.readFile(GLOBAL_STATE_FILE, "utf8");
+        const parsed = JSON.parse(raw);
+        return normalizeState(parsed);
+    } catch (err) {
+        if (err && err.code === "ENOENT") {
+            await writeGlobalState(EMPTY_STATE);
+            return { ...EMPTY_STATE };
+        }
+        return { ...EMPTY_STATE };
+    }
+}
+
+async function writeGlobalState(state) {
+    const normalized = normalizeState(state);
+    await fs.writeFile(GLOBAL_STATE_FILE, JSON.stringify(normalized), "utf8");
+    return normalized;
+}
 
 function bucketViewCount(viewCount) {
     const vc = Number(viewCount || 0);
@@ -80,6 +120,26 @@ function mapCategoryToGenre(categoryId) {
     };
     return map[String(categoryId)] || "other";
 }
+
+app.get("/api/state", async (_req, res) => {
+    try {
+        const state = await readGlobalState();
+        res.json(state);
+    } catch (err) {
+        console.error("/api/state GET error", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+app.post("/api/state", async (req, res) => {
+    try {
+        const saved = await writeGlobalState(req.body || EMPTY_STATE);
+        res.json({ ok: true, state: saved });
+    } catch (err) {
+        console.error("/api/state POST error", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 app.get("/api/video-meta", async (req, res) => {
     if (!API_KEY) {
