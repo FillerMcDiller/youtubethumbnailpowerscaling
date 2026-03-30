@@ -3,6 +3,8 @@ const MAX_MATCH_HISTORY = 250;
 const MAX_RANDOM_RESULTS = 50;
 const MAX_PAIR_ATTEMPTS = 12;
 const SEARCH_BATCH_SIZE = 25;
+const CACHE_TTL_SECONDS = 3600; // Cache results for 1 hour
+const VIDEO_CACHE_PREFIX = "video-cache:";
 
 const QUERY_TOPICS = [
     "cooking", "documentary", "true crime", "space", "history", "engineering", "iceberg explained",
@@ -234,47 +236,82 @@ async function fetchYoutubeVideosByIds(ids, env, strict = true) {
         return [];
     }
 
-    const detailsUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
-    detailsUrl.searchParams.set("part", "snippet,statistics,status");
-    detailsUrl.searchParams.set("id", ids.join(","));
-    detailsUrl.searchParams.set("key", env.YT_API_KEY);
-
-    const detailsResponse = await fetch(detailsUrl.toString());
-    if (!detailsResponse.ok) {
-        const body = await detailsResponse.text().catch(() => "");
-        throw new Error(`videos-list-failed:${detailsResponse.status}:${body}`);
+    // Try to get cached videos first
+    const cached = [];
+    const uncachedIds = [];
+    for (const id of ids) {
+        try {
+            const cacheKey = `${VIDEO_CACHE_PREFIX}${id}`;
+            const cached_video = await env.POWERSCALING_KV.get(cacheKey);
+            if (cached_video) {
+                cached.push(JSON.parse(cached_video));
+            } else {
+                uncachedIds.push(id);
+            }
+        } catch (err) {
+            uncachedIds.push(id);
+        }
     }
 
-    const detailsJson = await detailsResponse.json();
-    const items = Array.isArray(detailsJson.items) ? detailsJson.items : [];
+    // Fetch any uncached videos from YouTube
+    let fetched = [];
+    if (uncachedIds.length > 0) {
+        const detailsUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+        detailsUrl.searchParams.set("part", "snippet,statistics,status");
+        detailsUrl.searchParams.set("id", uncachedIds.join(","));
+        detailsUrl.searchParams.set("key", env.YT_API_KEY);
 
-    return items.map((item) => {
-        const id = item && item.id ? String(item.id) : "";
-        const snippet = item && item.snippet ? item.snippet : {};
-        const stats = item && item.statistics ? item.statistics : {};
-        const status = item && item.status ? item.status : {};
-        const viewCount = Number(stats.viewCount || 0);
-        const likeCount = Number(stats.likeCount || 0);
+        const detailsResponse = await fetch(detailsUrl.toString());
+        if (!detailsResponse.ok) {
+            const body = await detailsResponse.text().catch(() => "");
+            throw new Error(`videos-list-failed:${detailsResponse.status}:${body}`);
+        }
 
-        return {
-            id,
-            title: snippet.title || `YouTube Video ${id}`,
-            description: snippet.description || "",
-            channel: snippet.channelTitle || "Unknown channel",
-            category: "youtube-random",
-            url: `https://www.youtube.com/watch?v=${id}`,
-            language: detectLanguage(snippet),
-            viewCount,
-            likeCount,
-            viewBucket: bucketViewCount(viewCount),
-            ageBucket: bucketAge(snippet.publishedAt),
-            likeDislikeSentiment: bucketSentiment(viewCount, likeCount),
-            genre: mapCategoryToGenre(snippet.categoryId),
-            embeddable: Boolean(status.embeddable),
-            privacyStatus: status.privacyStatus || "",
-            uploadStatus: status.uploadStatus || ""
-        };
-    }).filter((video) => {
+        const detailsJson = await detailsResponse.json();
+        const items = Array.isArray(detailsJson.items) ? detailsJson.items : [];
+
+        fetched = items.map((item) => {
+            const id = item && item.id ? String(item.id) : "";
+            const snippet = item && item.snippet ? item.snippet : {};
+            const stats = item && item.statistics ? item.statistics : {};
+            const status = item && item.status ? item.status : {};
+            const viewCount = Number(stats.viewCount || 0);
+            const likeCount = Number(stats.likeCount || 0);
+
+            return {
+                id,
+                title: snippet.title || `YouTube Video ${id}`,
+                description: snippet.description || "",
+                channel: snippet.channelTitle || "Unknown channel",
+                category: "youtube-random",
+                url: `https://www.youtube.com/watch?v=${id}`,
+                language: detectLanguage(snippet),
+                viewCount,
+                likeCount,
+                viewBucket: bucketViewCount(viewCount),
+                ageBucket: bucketAge(snippet.publishedAt),
+                likeDislikeSentiment: bucketSentiment(viewCount, likeCount),
+                genre: mapCategoryToGenre(snippet.categoryId),
+                embeddable: Boolean(status.embeddable),
+                privacyStatus: status.privacyStatus || "",
+                uploadStatus: status.uploadStatus || ""
+            };
+        });
+
+        // Cache the fetched videos
+        for (const video of fetched) {
+            try {
+                const cacheKey = `${VIDEO_CACHE_PREFIX}${video.id}`;
+                await env.POWERSCALING_KV.put(cacheKey, JSON.stringify(video), { expirationTtl: CACHE_TTL_SECONDS });
+            } catch (err) {
+                // Cache failure is non-fatal
+            }
+        }
+    }
+
+    const allVideos = [...cached, ...fetched];
+
+    return allVideos.filter((video) => {
         if (!video.id) {
             return false;
         }
