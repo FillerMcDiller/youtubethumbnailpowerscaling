@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Youtube Thumbnail Powerscaling</title>
     <style>
+        @import url("https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap");
+
         :root {
             --bg: #f8f8f1;
             --panel: #ffffff;
@@ -24,7 +26,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            font-family: "Comic Sans MS", "Comic Neue", "Chalkboard SE", "Trebuchet MS", sans-serif;
             color: var(--text);
             background: radial-gradient(circle at 10% 10%, #fff9c4, transparent 35%),
                 radial-gradient(circle at 90% 8%, #b3e5fc, transparent 30%),
@@ -847,17 +849,17 @@
                 }));
         }
 
-        async function fetchRemotePair(excludedSet = new Set()) {
+        async function fetchRemotePair(excludedSet = new Set(), filters = activeFilters) {
             if (!HAS_REMOTE_API) {
                 return null;
             }
 
             const params = new URLSearchParams({
-                genre: activeFilters.genre,
-                views: activeFilters.views,
-                language: activeFilters.language,
-                age: activeFilters.age,
-                likes: activeFilters.likes
+                genre: filters.genre || "any",
+                views: filters.views || "any",
+                language: filters.language || "any",
+                age: filters.age || "any",
+                likes: filters.likes || "any"
             });
 
             const excluded = Array.from(excludedSet).slice(-350);
@@ -1033,7 +1035,7 @@
                 const excluded = buildUsedIdSet();
                 for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
                     try {
-                        const pair = await fetchRemotePair(excluded);
+                        const pair = await fetchRemotePair(excluded, activeFilters);
                         const leftRaw = pair[0];
                         const rightRaw = pair[1];
 
@@ -1054,6 +1056,40 @@
                         return [left, right];
                     } catch {
                         // Retry with a fresh remote query.
+                    }
+                }
+
+                const relaxedFilters = {
+                    genre: activeFilters.genre,
+                    views: "any",
+                    language: "any",
+                    age: "any",
+                    likes: "any"
+                };
+
+                for (let attempt = 0; attempt < 4; attempt += 1) {
+                    try {
+                        const pair = await fetchRemotePair(excluded, relaxedFilters);
+                        const leftRaw = pair[0];
+                        const rightRaw = pair[1];
+
+                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
+                            continue;
+                        }
+
+                        registerVideo(leftRaw);
+                        registerVideo(rightRaw);
+
+                        const left = state.videosById[leftRaw.id];
+                        const right = state.videosById[rightRaw.id];
+
+                        seenThisRun.add(left.id);
+                        seenThisRun.add(right.id);
+                        rememberUsedId(left.id);
+                        rememberUsedId(right.id);
+                        return [left, right];
+                    } catch {
+                        // Continue trying relaxed remote pulls.
                     }
                 }
 
