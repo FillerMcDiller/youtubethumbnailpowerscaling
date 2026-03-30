@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Youtube Thumbnail Powerscaling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f1722;
+            --bg-mid: #132033;
+            --panel: rgba(14, 24, 36, 0.82);
+            --line: rgba(255, 255, 255, 0.12);
+            --text: #f1f6fb;
+            --muted: #a8bccf;
+            --hot: #ff7a18;
+            --cold: #0bb3ff;
+            --win: #8be46d;
+            --danger: #ff5a7a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 15% 15%, rgba(255, 122, 24, 0.25) 0%, transparent 35%),
+                radial-gradient(circle at 85% 10%, rgba(11, 179, 255, 0.28) 0%, transparent 30%),
+                linear-gradient(135deg, var(--bg-dark), var(--bg-mid));
+            padding: 22px;
+        }
+
+        .wrap {
+            width: min(1200px, 100%);
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0;
+            font-family: "Bebas Neue", sans-serif;
+            letter-spacing: 1.6px;
+            font-size: clamp(2.2rem, 5vw, 4rem);
+            line-height: 0.9;
+        }
+
+        .subtitle {
+            margin-top: 8px;
+            color: var(--muted);
+        }
+
+        .board {
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: 1.8fr 1fr;
+            gap: 16px;
+        }
+
+        .filters-bar {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 140px;
+        }
+
+        .filter-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        .filter-select {
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(10, 18, 30, 0.9);
+            color: var(--text);
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            font-family: inherit;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            background: var(--panel);
+            border-radius: 18px;
+            padding: 14px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .versus {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .video-card {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateY(18px);
+            opacity: 0;
+            animation: rise-in 350ms ease forwards;
+        }
+
+        .video-card:nth-child(3) {
+            animation-delay: 80ms;
+        }
+
+        @keyframes rise-in {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            display: block;
+        }
+
+        .video-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 0;
+            display: block;
+            background: #000;
+        }
+
+        .video-info {
+            padding: 10px;
+        }
+
+        .video-title {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .video-meta {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .video-link {
+            color: #a9dfff;
+            text-decoration: none;
+            font-size: 0.84rem;
+            word-break: break-all;
+        }
+
+        .video-link:hover {
+            text-decoration: underline;
+        }
+
+        .choose-btn {
+            margin-top: 10px;
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            color: #0f1722;
+            background: linear-gradient(90deg, var(--hot), #ffb84d);
+            transition: transform 120ms ease, filter 120ms ease;
+        }
+
+        .choose-btn:hover {
+            transform: translateY(-1px);
+            filter: saturate(1.12);
+        }
+
+        .choose-btn.right {
+            background: linear-gradient(90deg, var(--cold), #8be1ff);
+        }
+
+        .vs-pill {
+            align-self: center;
+            background: #0f1722;
+            border: 1px solid var(--line);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-family: "Bebas Neue", sans-serif;
+            letter-spacing: 1.4px;
+            font-size: 1.1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            border: 1px solid var(--line);
+            color: var(--text);
+            background: #152538;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .control-btn.reset {
+            border-color: rgba(255, 90, 122, 0.5);
+            color: #ffd9e1;
+            background: rgba(255, 90, 122, 0.14);
+        }
+
+        .stats-title {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-family: "Bebas Neue", sans-serif;
+            letter-spacing: 1.2px;
+            font-size: 1.8rem;
+        }
+
+        .leader-item,
+        .match-item {
+            display: grid;
+            gap: 6px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .leader-item {
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+        }
+
+        .rank {
+            color: var(--muted);
+            font-weight: 700;
+            min-width: 24px;
+        }
+
+        .power {
+            color: var(--win);
+            font-weight: 700;
+        }
+
+        .match-item small {
+            color: var(--muted);
+        }
+
+        .empty {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .status {
+            border: 1px dashed var(--line);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        @media (max-width: 960px) {
+            .board {
+                grid-template-columns: 1fr;
+            }
+
+            .versus {
+                grid-template-columns: 1fr;
+            }
+
+            .vs-pill {
+                justify-self: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>YOUTUBE THUMBNAIL POWERSCALING</h1>
+        <p class="subtitle">Choose the stronger thumbnail. Winner gets +1 power and climbs the bracket. Pool includes viral, gaming, science, cursed, and music chaos.</p>
+
+        <div class="filters-bar">
+            <div class="filter-group">
+                <span class="filter-label">Genre</span>
+                <select id="genreFilter" class="filter-select">
+                    <option value="any">Any</option>
+                    <option value="music">Music</option>
+                    <option value="gaming">Gaming</option>
+                    <option value="education">Education</option>
+                    <option value="documentary">Documentary</option>
+                    <option value="meme">Meme / Comedy</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">View Count</span>
+                <select id="viewsFilter" class="filter-select">
+                    <option value="any">Any</option>
+                    <option value="lt100k">&lt; 100k</option>
+                    <option value="100k_1m">100k - 1M</option>
+                    <option value="1m_10m">1M - 10M</option>
+                    <option value="gt10m">10M+</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Language</span>
+                <select id="languageFilter" class="filter-select">
+                    <option value="any">Any</option>
+                    <option value="en">English</option>
+                    <option value="non_en">Non-English</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Video Age</span>
+                <select id="ageFilter" class="filter-select">
+                    <option value="any">Any</option>
+                    <option value="lt1y">&lt; 1 year</option>
+                    <option value="1_5y">1 - 5 years</option>
+                    <option value="5_10y">5 - 10 years</option>
+                    <option value="gt10y">10+ years</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Likes / Dislikes</span>
+                <select id="likesFilter" class="filter-select">
+                    <option value="any">Any</option>
+                    <option value="liked">Mostly liked</option>
+                    <option value="mixed">Mixed</option>
+                    <option value="controversial">Controversial</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="board">
+            <section class="panel">
+                <div class="versus" id="versusArea"></div>
+                <div class="controls">
+                    <button class="control-btn" id="skipBtn" type="button">Skip Matchup</button>
+                    <button class="control-btn reset" id="resetBtn" type="button">Reset Powerscaling</button>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2 class="stats-title">Leaderboard</h2>
+                <div id="leaderboard"></div>
+            </section>
+        </div>
+
+        <section class="panel" style="margin-top: 16px;">
+            <h2 class="stats-title">Bracket Feed</h2>
+            <div id="bracketFeed"></div>
+        </section>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "yt-thumbnail-powerscaling-v5";
+        const MAX_FEED_ITEMS = 24;
+        const MAX_MATCH_HISTORY = 250;
+        const MAX_USED_IDS = 4000;
+        const MIN_POOL_BEFORE_FETCH = 30;
+        const FETCH_ATTEMPTS_PER_PAIR = 6;
+        const IS_FILE_MODE = window.location.protocol === "file:";
+
+        const REDDIT_SOURCES = [
+            "videos", "deepintoyoutube", "youtubehaiku", "ObscureMedia", "Documentaries", "crazyvideos", "nextfuckinglevel", "gaming"
+        ];
+        const REDDIT_LISTINGS = ["hot", "new", "top"];
+
+        const INVIDIOUS_INSTANCES = [
+            "https://yewtu.be",
+            "https://inv.nadeko.net",
+            "https://vid.puffyan.us",
+            "https://invidious.privacyredirect.com"
+        ];
+
+        const QUERY_TOPICS = [
+            "cooking", "documentary", "true crime", "epstein island documentary", "space", "history", "engineering", "iceberg explained",
+            "wildlife", "speedrun", "lost media", "weird internet", "horror short film", "math", "physics", "street food", "podcast clips"
+        ];
+        const QUERY_MODIFIERS = [
+            "6 hour", "full", "obscure", "viral", "unhinged", "classic", "live", "compilation", "analysis", "extended", "2024", "2025"
+        ];
+
+        const FALLBACK_VIDEOS = [
+            { id: "dQw4w9WgXcQ", category: "fallback" }, { id: "jNQXAC9IVRw", category: "fallback" }, { id: "QH2-TGUlwu4", category: "fallback" },
+            { id: "iik25wqIuFo", category: "fallback" }, { id: "hFZFjoX2cGg", category: "fallback" }, { id: "fJ9rUzIMcZQ", category: "fallback" },
+            { id: "kJQP7kiw5Fk", category: "fallback" }, { id: "9bZkp7q19f0", category: "fallback" }, { id: "L_jWHffIx5E", category: "fallback" },
+            { id: "CevxZvSJLk8", category: "fallback" }, { id: "e-ORhEE9VVg", category: "fallback" }, { id: "2Vv-BfVoq4g", category: "fallback" },
+            { id: "M7lc1UVf-VE", category: "fallback" }, { id: "3JZ_D3ELwOQ", category: "fallback" }, { id: "OPf0YbXqDm0", category: "fallback" },
+            { id: "YQHsXMglC9A", category: "fallback" }, { id: "hT_nvWreIhg", category: "fallback" }, { id: "uelHwf8o7_U", category: "fallback" },
+            { id: "SlPhMPnQ58k", category: "fallback" }, { id: "09R8_2nJtjg", category: "fallback" }, { id: "pRpeEdMmmQ0", category: "fallback" },
+            { id: "KQ6zr6kCPj8", category: "fallback" }, { id: "IcrbM1l_BoI", category: "fallback" }, { id: "txqiwrbYGrs", category: "fallback" },
+            { id: "_OBlgSz8sSM", category: "fallback" }, { id: "J---aiyznGQ", category: "fallback" }, { id: "ZZ5LpwO-An4", category: "fallback" },
+            { id: "oavMtUWDBTM", category: "fallback" }, { id: "4r7wHMg5Yjg", category: "fallback" }, { id: "nGeKSiCQkPw", category: "fallback" },
+            { id: "TcMBFSGVi1c", category: "fallback" }, { id: "6ZfuNTqbHE8", category: "fallback" }, { id: "wAIP6fI0NAI", category: "fallback" },
+            { id: "xuCn8ux2gbs", category: "fallback" }, { id: "RgKAFK5djSk", category: "fallback" }, { id: "60ItHLz5WEA", category: "fallback" },
+            { id: "YVkUvmDQ3HY", category: "fallback" }, { id: "C0DPdy98e4c", category: "fallback" }, { id: "w4sLAQvEH-M", category: "fallback" },
+            { id: "xvFZjo5PgG0", category: "fallback" }, { id: "M3r2XDceM6A", category: "fallback" }, { id: "8ybW48rKBME", category: "fallback" },
+            { id: "aqz-KE-bpKQ", category: "fallback" }, { id: "lXMskKTw3Bc", category: "fallback" }, { id: "UiLSiqyDf4Y", category: "fallback" },
+            { id: "D8V0wQ0W4d4", category: "fallback" }, { id: "gA6ppby3JC8", category: "fallback" }, { id: "u9Mv98Gr5pY", category: "fallback" },
+            { id: "fC7oUOUEEi4", category: "fallback" }, { id: "X2WH8mHJnhM", category: "fallback" }, { id: "E7wJTI-1dvQ", category: "fallback" },
+            { id: "sTSA_sWGM44", category: "fallback" }, { id: "sNPnbI1arSE", category: "fallback" }, { id: "5NV6Rdv1a3I", category: "fallback" },
+            { id: "bM7SZ5SBzyY", category: "fallback" }, { id: "hTWKbfoikeg", category: "fallback" },
+            { id: "04854XqcfCY", category: "fallback" }, { id: "QH2-TGulWu4", category: "fallback" }, { id: "LsoLEjrDogU", category: "fallback" },
+            { id: "2vjPBrBU-TM", category: "fallback" }, { id: "fRh_vgS2dFE", category: "fallback" }, { id: "YqeW9_5kURI", category: "fallback" }
+        ];
+
+        const versusArea = document.getElementById("versusArea");
+        const leaderboardEl = document.getElementById("leaderboard");
+        const bracketFeedEl = document.getElementById("bracketFeed");
+        const skipBtn = document.getElementById("skipBtn");
+        const resetBtn = document.getElementById("resetBtn");
+
+        const genreFilterEl = document.getElementById("genreFilter");
+        const viewsFilterEl = document.getElementById("viewsFilter");
+        const languageFilterEl = document.getElementById("languageFilter");
+        const ageFilterEl = document.getElementById("ageFilter");
+        const likesFilterEl = document.getElementById("likesFilter");
+
+        let state = loadState();
+        let currentPair = null;
+        let isLoadingPair = false;
+        let candidateQueue = [];
+        let seenThisRun = new Set();
+        const metadataCache = new Map();
+
+        const activeFilters = {
+            genre: "any",
+            views: "any",
+            language: "any",
+            age: "any",
+            likes: "any"
+        };
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function randomFrom(items) {
+            return items[Math.floor(Math.random() * items.length)];
+        }
+
+        function syntheticMetaForId(id) {
+            let sum = 0;
+            for (let i = 0; i < id.length; i += 1) {
+                sum += id.charCodeAt(i);
+            }
+
+            const genres = ["music", "gaming", "education", "documentary", "meme", "other"];
+            const viewBuckets = ["lt100k", "100k_1m", "1m_10m", "gt10m"];
+            const languages = ["en", "non_en"];
+            const ageBuckets = ["lt1y", "1_5y", "5_10y", "gt10y"];
+            const likeBuckets = ["liked", "mixed", "controversial"];
+
+            return {
+                genre: genres[sum % genres.length],
+                viewBucket: viewBuckets[sum % viewBuckets.length],
+                language: languages[sum % languages.length],
+                ageBucket: ageBuckets[sum % ageBuckets.length],
+                likeDislikeSentiment: likeBuckets[sum % likeBuckets.length]
+            };
+        }
+
+        function matchesFilters(video) {
+            if (!video) {
+                return false;
+            }
+
+            // Genre (uses explicit genre when present, otherwise category as a fallback)
+            if (activeFilters.genre !== "any") {
+                const vGenre = (video.genre || video.category || "other").toLowerCase();
+                if (vGenre !== activeFilters.genre) {
+                    return false;
+                }
+            }
+
+            // The following filters require real stats (views, language, age, likes).
+            // In file:// offline mode we can't query YouTube APIs, so they are
+            // treated as "Any" regardless of the dropdown settings.
+            if (!IS_FILE_MODE) {
+                // View count buckets (string bucket, e.g. "1m_10m")
+                if (activeFilters.views !== "any") {
+                    const bucket = video.viewBucket || null;
+                    if (bucket && bucket !== activeFilters.views) {
+                        return false;
+                    }
+                }
+
+                // Language (expects language code like "en" or "non_en")
+                if (activeFilters.language !== "any") {
+                    const lang = (video.language || "en").toLowerCase();
+                    const isEnglish = lang.startsWith("en");
+                    if (activeFilters.language === "en" && !isEnglish) return false;
+                    if (activeFilters.language === "non_en" && isEnglish) return false;
+                }
+
+                // Age buckets (string bucket, e.g. "5_10y")
+                if (activeFilters.age !== "any") {
+                    const bucket = video.ageBucket || null;
+                    if (bucket && bucket !== activeFilters.age) {
+                        return false;
+                    }
+                }
+
+                // Likes/dislikes sentiment (expects likeDislikeSentiment string when available)
+                if (activeFilters.likes !== "any" && video.likeDislikeSentiment) {
+                    if (video.likeDislikeSentiment !== activeFilters.likes) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) {
+                    return { videosById: {}, powers: {}, matches: [], usedIds: [] };
+                }
+
+                const parsed = JSON.parse(raw);
+                return {
+                    videosById: parsed.videosById && typeof parsed.videosById === "object" ? parsed.videosById : {},
+                    powers: parsed.powers && typeof parsed.powers === "object" ? parsed.powers : {},
+                    matches: Array.isArray(parsed.matches) ? parsed.matches : [],
+                    usedIds: Array.isArray(parsed.usedIds) ? parsed.usedIds : []
+                };
+            } catch {
+                return { videosById: {}, powers: {}, matches: [], usedIds: [] };
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function rememberUsedId(videoId) {
+            if (!videoId) {
+                return;
+            }
+            if (!Array.isArray(state.usedIds)) {
+                state.usedIds = [];
+            }
+            if (state.usedIds.includes(videoId)) {
+                return;
+            }
+            state.usedIds.push(videoId);
+            if (state.usedIds.length > MAX_USED_IDS) {
+                state.usedIds = state.usedIds.slice(-MAX_USED_IDS);
+            }
+        }
+
+        function buildUsedIdSet() {
+            const persisted = Array.isArray(state.usedIds) ? state.usedIds : [];
+            return new Set([...persisted, ...seenThisRun]);
+        }
+
+        function registerVideo(video) {
+            const existing = state.videosById[video.id] || {};
+            state.videosById[video.id] = {
+                id: video.id,
+                title: video.title || existing.title || `YouTube Video ${video.id}`,
+                channel: video.channel || existing.channel || "Unknown channel",
+                category: video.category || existing.category || "misc",
+                url: video.url || `https://www.youtube.com/watch?v=${video.id}`,
+                genre: video.genre || existing.genre,
+                viewBucket: video.viewBucket || existing.viewBucket,
+                language: video.language || existing.language,
+                ageBucket: video.ageBucket || existing.ageBucket,
+                likeDislikeSentiment: video.likeDislikeSentiment || existing.likeDislikeSentiment
+            };
+            if (typeof state.powers[video.id] !== "number") {
+                state.powers[video.id] = 0;
+            }
+        }
+
+        async function hydrateVideoMetadata(video) {
+            if (!video || !video.id) {
+                return video;
+            }
+
+            // In local file mode, skip external metadata fetches entirely to avoid
+            // long stalls or timeouts behind VPNs/proxies. Just register with
+            // whatever basic info we already have.
+            if (IS_FILE_MODE) {
+                registerVideo(video);
+                return state.videosById[video.id];
+            }
+
+            const cached = metadataCache.get(video.id);
+            if (cached) {
+                const mergedFromCache = {
+                    ...video,
+                    title: cached.title || video.title,
+                    channel: cached.channel || video.channel
+                };
+                registerVideo(mergedFromCache);
+                return state.videosById[video.id];
+            }
+
+            try {
+                const endpoint = `/api/video-meta?id=${encodeURIComponent(video.id)}`;
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error("metadata-unavailable");
+                }
+                const payload = await response.json();
+
+                const merged = {
+                    ...video,
+                    title: payload && payload.title ? payload.title : video.title,
+                    channel: payload && payload.channel ? payload.channel : video.channel,
+                    url: (payload && payload.url) || `https://www.youtube.com/watch?v=${video.id}`,
+                    genre: payload && payload.genre ? payload.genre : video.genre,
+                    viewBucket: payload && payload.viewBucket ? payload.viewBucket : video.viewBucket,
+                    language: payload && payload.language ? payload.language : video.language,
+                    ageBucket: payload && payload.ageBucket ? payload.ageBucket : video.ageBucket,
+                    likeDislikeSentiment: payload && payload.likeDislikeSentiment ? payload.likeDislikeSentiment : video.likeDislikeSentiment
+                };
+
+                metadataCache.set(video.id, {
+                    title: merged.title,
+                    channel: merged.channel
+                });
+
+                registerVideo(merged);
+                return state.videosById[video.id];
+            } catch {
+                registerVideo(video);
+                return state.videosById[video.id];
+            }
+        }
+
+        function allKnownVideos() {
+            return Object.values(state.videosById);
+        }
+
+        function extractYoutubeId(rawUrl) {
+            if (!rawUrl || typeof rawUrl !== "string") {
+                return null;
+            }
+
+            let parsed;
+            try {
+                parsed = new URL(rawUrl);
+            } catch {
+                return null;
+            }
+
+            const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+            if (host === "youtu.be") {
+                const shortId = parsed.pathname.replace(/^\//, "").split("/")[0];
+                return shortId || null;
+            }
+
+            if (host.endsWith("youtube.com")) {
+                if (parsed.pathname === "/watch") {
+                    return parsed.searchParams.get("v");
+                }
+                const parts = parsed.pathname.split("/").filter(Boolean);
+                if (parts[0] === "shorts" || parts[0] === "embed") {
+                    return parts[1] || null;
+                }
+            }
+
+            return null;
+        }
+
+        async function fetchRedditBatch() {
+            const subreddit = randomFrom(REDDIT_SOURCES);
+            const listing = randomFrom(REDDIT_LISTINGS);
+            const topWindow = randomFrom(["day", "week", "month", "year", "all"]);
+            const endpoint = listing === "top"
+                ? `https://www.reddit.com/r/${subreddit}/${listing}.json?limit=100&t=${topWindow}&raw_json=1`
+                : `https://www.reddit.com/r/${subreddit}/${listing}.json?limit=100&raw_json=1`;
+
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error("reddit-failed");
+            }
+
+            const json = await response.json();
+            const children = json && json.data && Array.isArray(json.data.children) ? json.data.children : [];
+            const results = [];
+
+            for (const child of children) {
+                const post = child && child.data ? child.data : null;
+                if (!post) {
+                    continue;
+                }
+                const rawUrl = post.url_overridden_by_dest || post.url;
+                const id = extractYoutubeId(rawUrl);
+                if (!id) {
+                    continue;
+                }
+                results.push({
+                    id,
+                    title: post.title || `YouTube Video ${id}`,
+                    channel: post.author || `r/${subreddit}`,
+                    category: subreddit,
+                    url: `https://www.youtube.com/watch?v=${id}`
+                });
+            }
+
+            return results;
+        }
+
+        function buildRandomQuery() {
+            return `${randomFrom(QUERY_MODIFIERS)} ${randomFrom(QUERY_TOPICS)}`;
+        }
+
+        async function fetchInvidiousBatch() {
+            const instance = randomFrom(INVIDIOUS_INSTANCES);
+            const query = buildRandomQuery();
+            const sortBy = randomFrom(["relevance", "upload_date", "view_count", "rating"]);
+            const page = 1 + Math.floor(Math.random() * 4);
+            const endpoint = `${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video&sort_by=${sortBy}&page=${page}`;
+
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error("search-failed");
+            }
+
+            const json = await response.json();
+            if (!Array.isArray(json)) {
+                return [];
+            }
+
+            const results = [];
+            for (const item of json) {
+                if (!item || !item.videoId) {
+                    continue;
+                }
+                results.push({
+                    id: item.videoId,
+                    title: item.title || `YouTube Video ${item.videoId}`,
+                    channel: item.author || "Unknown",
+                    category: "search-random",
+                    url: `https://www.youtube.com/watch?v=${item.videoId}`
+                });
+            }
+            return results;
+        }
+
+        async function refillCandidateQueueIfNeeded() {
+            if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                return true;
+            }
+
+            if (IS_FILE_MODE) {
+                const usedIds = buildUsedIdSet();
+                const queueIds = new Set(candidateQueue.map((video) => video.id));
+
+                for (const seed of FALLBACK_VIDEOS) {
+                    if (queueIds.has(seed.id) || usedIds.has(seed.id)) {
+                        continue;
+                    }
+                    const meta = syntheticMetaForId(seed.id);
+                    candidateQueue.push({
+                        id: seed.id,
+                        title: `YouTube Video ${seed.id}`,
+                        channel: "Offline pool",
+                        category: seed.category,
+                        url: `https://www.youtube.com/watch?v=${seed.id}`,
+                        ...meta
+                    });
+                    queueIds.add(seed.id);
+                }
+
+                // Shuffle to keep matchups unpredictable in local-only mode.
+                for (let i = candidateQueue.length - 1; i > 0; i -= 1) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    const tmp = candidateQueue[i];
+                    candidateQueue[i] = candidateQueue[j];
+                    candidateQueue[j] = tmp;
+                }
+
+                return candidateQueue.length > 0;
+            }
+
+            const seenQueueIds = new Set(candidateQueue.map((video) => video.id));
+            const usedIds = buildUsedIdSet();
+
+            const addBatch = (batch) => {
+                for (const video of batch) {
+                    if (!seenQueueIds.has(video.id) && !usedIds.has(video.id)) {
+                        candidateQueue.push(video);
+                        seenQueueIds.add(video.id);
+                    }
+                }
+            };
+
+            let addedAny = false;
+
+            try {
+                const reddit = await fetchRedditBatch();
+                addBatch(reddit);
+                if (reddit.length > 0) {
+                    addedAny = true;
+                }
+            } catch {
+                // Continue to other sources.
+            }
+
+            try {
+                const invidious = await fetchInvidiousBatch();
+                addBatch(invidious);
+                if (invidious.length > 0) {
+                    addedAny = true;
+                }
+            } catch {
+                // Fallback will handle total failure.
+            }
+
+            return addedAny || candidateQueue.length > 0;
+        }
+
+        function getNextUnseenVideo(excluded = new Set()) {
+            const usedSet = buildUsedIdSet();
+            while (candidateQueue.length > 0) {
+                const next = candidateQueue.shift();
+                if (!next || excluded.has(next.id) || usedSet.has(next.id) || !matchesFilters(next)) {
+                    continue;
+                }
+                registerVideo(next);
+                return next;
+            }
+            return null;
+        }
+
+        async function useFallbackPair() {
+            for (const video of FALLBACK_VIDEOS) {
+                const meta = syntheticMetaForId(video.id);
+                registerVideo({
+                    id: video.id,
+                    title: `YouTube Video ${video.id}`,
+                    channel: "Offline pool",
+                    category: video.category,
+                    url: `https://www.youtube.com/watch?v=${video.id}`,
+                    ...meta
+                });
+            }
+
+            const known = allKnownVideos();
+            if (known.length < 2) {
+                return null;
+            }
+
+            const usedSet = buildUsedIdSet();
+            let usable = known.filter((video) => !usedSet.has(video.id) && matchesFilters(video));
+            if (usable.length < 2) {
+                // Start a new full pass after exhausting known pool.
+                seenThisRun = new Set();
+                state.usedIds = [];
+                usable = known.filter((video) => matchesFilters(video));
+            }
+
+            const left = usable[Math.floor(Math.random() * usable.length)];
+            const rightPool = usable.filter((video) => video.id !== left.id);
+            const right = rightPool[Math.floor(Math.random() * rightPool.length)];
+
+            const hydrated = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
+            rememberUsedId(hydrated[0] && hydrated[0].id);
+            rememberUsedId(hydrated[1] && hydrated[1].id);
+            saveState();
+            return hydrated;
+        }
+
+        async function buildFreshPair() {
+            for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
+                await refillCandidateQueueIfNeeded();
+
+                const left = getNextUnseenVideo();
+                if (!left) {
+                    continue;
+                }
+
+                const right = getNextUnseenVideo(new Set([left.id]));
+                if (!right) {
+                    continue;
+                }
+
+                const hydratedPair = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
+
+                seenThisRun.add(left.id);
+                seenThisRun.add(right.id);
+                rememberUsedId(left.id);
+                rememberUsedId(right.id);
+                saveState();
+                return hydratedPair;
+            }
+
+            seenThisRun = new Set();
+            await refillCandidateQueueIfNeeded();
+
+            const left = getNextUnseenVideo();
+            const right = getNextUnseenVideo(left ? new Set([left.id]) : new Set());
+            if (left && right) {
+                const hydratedPair = await Promise.all([hydrateVideoMetadata(left), hydrateVideoMetadata(right)]);
+                seenThisRun.add(left.id);
+                seenThisRun.add(right.id);
+                rememberUsedId(left.id);
+                rememberUsedId(right.id);
+                saveState();
+                return hydratedPair;
+            }
+
+            return await useFallbackPair();
+        }
+
+        function renderMatchup() {
+            if (isLoadingPair) {
+                versusArea.innerHTML = IS_FILE_MODE
+                    ? '<div class="status">Local mode: picking two fresh videos from a large offline pool...</div>'
+                    : '<div class="status">Fetching two new random YouTube videos...</div>';
+                return;
+            }
+
+            if (!currentPair) {
+                versusArea.innerHTML = '<div class="status">Could not load new videos. Click Skip Matchup to retry.</div>';
+                return;
+            }
+
+            const left = currentPair[0];
+            const right = currentPair[1];
+
+            const leftSourceLabel = IS_FILE_MODE && (left.channel === "Offline pool" || left.category === "fallback")
+                ? "Offline pool"
+                : (left.channel || "Unknown channel");
+            const rightSourceLabel = IS_FILE_MODE && (right.channel === "Offline pool" || right.category === "fallback")
+                ? "Offline pool"
+                : (right.channel || "Unknown channel");
+            const leftCategoryLabel = IS_FILE_MODE && left.category === "fallback" ? "offline" : (left.category || "misc");
+            const rightCategoryLabel = IS_FILE_MODE && right.category === "fallback" ? "offline" : (right.category || "misc");
+
+            versusArea.innerHTML = `
+                <article class="video-card">
+                    <iframe
+                        class="video-frame"
+                        src="https://www.youtube.com/embed/${left.id}?rel=0"
+                        title="${escapeHtml(left.title)}"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen>
+                    </iframe>
+                    <div class="video-info">
+                        <h3 class="video-title">${escapeHtml(left.title)}</h3>
+                        <p class="video-meta">${escapeHtml(leftSourceLabel)} | ${escapeHtml(leftCategoryLabel)} | Power: ${state.powers[left.id] || 0}</p>
+                        <a class="video-link" href="${escapeHtml(left.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(left.url)}</a>
+                        <button class="choose-btn" data-win-id="${left.id}" data-lose-id="${right.id}" type="button">
+                            Left Wins
+                        </button>
+                    </div>
+                </article>
+                <span class="vs-pill">VS</span>
+                <article class="video-card">
+                    <iframe
+                        class="video-frame"
+                        src="https://www.youtube.com/embed/${right.id}?rel=0"
+                        title="${escapeHtml(right.title)}"
+                        loading="lazy"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen>
+                    </iframe>
+                    <div class="video-info">
+                        <h3 class="video-title">${escapeHtml(right.title)}</h3>
+                        <p class="video-meta">${escapeHtml(rightSourceLabel)} | ${escapeHtml(rightCategoryLabel)} | Power: ${state.powers[right.id] || 0}</p>
+                        <a class="video-link" href="${escapeHtml(right.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(right.url)}</a>
+                        <button class="choose-btn right" data-win-id="${right.id}" data-lose-id="${left.id}" type="button">
+                            Right Wins
+                        </button>
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderLeaderboard() {
+            const known = allKnownVideos();
+            if (known.length === 0) {
+                leaderboardEl.innerHTML = '<p class="empty">No ranked videos yet.</p>';
+                return;
+            }
+
+            const sorted = [...known].sort((a, b) => {
+                const powerDiff = (state.powers[b.id] || 0) - (state.powers[a.id] || 0);
+                if (powerDiff !== 0) {
+                    return powerDiff;
+                }
+                return a.title.localeCompare(b.title);
+            });
+
+            leaderboardEl.innerHTML = sorted.map((video, idx) => `
+                <div class="leader-item">
+                    <span class="rank">#${idx + 1}</span>
+                    <span>${escapeHtml(video.title)}</span>
+                    <span class="power">${state.powers[video.id] || 0} power</span>
+                </div>
+            `).join("");
+        }
+
+        function renderBracketFeed() {
+            if (state.matches.length === 0) {
+                bracketFeedEl.innerHTML = '<p class="empty">No matches yet. Start powerscaling above.</p>';
+                return;
+            }
+
+            const visible = [...state.matches].reverse().slice(0, MAX_FEED_ITEMS);
+            bracketFeedEl.innerHTML = visible.map((match) => `
+                <div class="match-item">
+                    <div><strong>${escapeHtml(match.winnerTitle)}</strong> defeated ${escapeHtml(match.loserTitle)}</div>
+                    <small>+1 power to winner (${match.winnerPowerAfter} total)</small>
+                </div>
+            `).join("");
+        }
+
+        function paint() {
+            renderMatchup();
+            renderLeaderboard();
+            renderBracketFeed();
+        }
+
+        async function queueNextMatchup() {
+            isLoadingPair = true;
+            skipBtn.disabled = true;
+            resetBtn.disabled = true;
+            renderMatchup();
+
+            try {
+                currentPair = await buildFreshPair();
+            } catch {
+                currentPair = await useFallbackPair();
+            } finally {
+                isLoadingPair = false;
+                skipBtn.disabled = false;
+                resetBtn.disabled = false;
+                paint();
+            }
+        }
+
+        async function recordWin(winnerId, loserId) {
+            state.powers[winnerId] = (state.powers[winnerId] || 0) + 1;
+            const winner = state.videosById[winnerId];
+            const loser = state.videosById[loserId];
+
+            state.matches.push({
+                winnerId,
+                loserId,
+                winnerTitle: winner ? winner.title : winnerId,
+                loserTitle: loser ? loser.title : loserId,
+                winnerPowerAfter: state.powers[winnerId],
+                happenedAt: Date.now()
+            });
+
+            if (state.matches.length > MAX_MATCH_HISTORY) {
+                state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
+            }
+
+            saveState();
+            await queueNextMatchup();
+        }
+
+        async function resetAll() {
+            state = { videosById: {}, powers: {}, matches: [], usedIds: [] };
+            candidateQueue = [];
+            seenThisRun = new Set();
+            saveState();
+            await queueNextMatchup();
+        }
+
+        function handleFilterChange() {
+            activeFilters.genre = genreFilterEl ? genreFilterEl.value : "any";
+            activeFilters.views = viewsFilterEl ? viewsFilterEl.value : "any";
+            activeFilters.language = languageFilterEl ? languageFilterEl.value : "any";
+            activeFilters.age = ageFilterEl ? ageFilterEl.value : "any";
+            activeFilters.likes = likesFilterEl ? likesFilterEl.value : "any";
+
+            // Reset current queue so new matchups respect the updated filters.
+            candidateQueue = [];
+            seenThisRun = new Set();
+
+            if (!isLoadingPair) {
+                queueNextMatchup();
+            }
+        }
+
+        versusArea.addEventListener("click", async (event) => {
+            const button = event.target.closest("button[data-win-id]");
+            if (!button || isLoadingPair) {
+                return;
+            }
+
+            await recordWin(button.dataset.winId, button.dataset.loseId);
+        });
+
+        skipBtn.addEventListener("click", async () => {
+            if (isLoadingPair) {
+                return;
+            }
+            await queueNextMatchup();
+        });
+
+        resetBtn.addEventListener("click", async () => {
+            if (isLoadingPair) {
+                return;
+            }
+            const shouldReset = window.confirm("Reset all powers and clear bracket history?");
+            if (shouldReset) {
+                await resetAll();
+            }
+        });
+
+        if (genreFilterEl) genreFilterEl.addEventListener("change", handleFilterChange);
+        if (viewsFilterEl) viewsFilterEl.addEventListener("change", handleFilterChange);
+        if (languageFilterEl) languageFilterEl.addEventListener("change", handleFilterChange);
+        if (ageFilterEl) ageFilterEl.addEventListener("change", handleFilterChange);
+        if (likesFilterEl) likesFilterEl.addEventListener("change", handleFilterChange);
+
+        // In offline file mode, advanced filters (views/language/age/likes) can't
+        // be enforced because the app has no access to real YouTube stats.
+        // Keep the UI visible but make it clear they effectively behave as "Any".
+        if (IS_FILE_MODE) {
+            if (viewsFilterEl) viewsFilterEl.title = "View filters require online stats; in file mode they behave as Any.";
+            if (languageFilterEl) languageFilterEl.title = "Language filters require online stats; in file mode they behave as Any.";
+            if (ageFilterEl) ageFilterEl.title = "Age filters require online stats; in file mode they behave as Any.";
+            if (likesFilterEl) likesFilterEl.title = "Likes/dislikes filters require online stats; in file mode they behave as Any.";
+        }
+
+        paint();
+        queueNextMatchup();
+    </script>
+</body>
+
+</html>
