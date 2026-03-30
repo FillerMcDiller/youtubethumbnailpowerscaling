@@ -819,38 +819,6 @@
             return results;
         }
 
-        async function fetchRemoteBatch() {
-            if (!HAS_REMOTE_API) {
-                return [];
-            }
-
-            const endpoint = apiUrl(`/api/random-videos?limit=${MIN_POOL_BEFORE_FETCH * 2}`);
-            const response = await fetch(endpoint, { cache: "no-store" });
-            if (!response.ok) {
-                throw new Error("remote-random-failed");
-            }
-
-            const payload = await response.json();
-            if (!payload || !Array.isArray(payload.videos)) {
-                return [];
-            }
-
-            return payload.videos
-                .filter((video) => video && video.id)
-                .map((video) => ({
-                    id: String(video.id),
-                    title: video.title || `YouTube Video ${video.id}`,
-                    channel: video.channel || "Unknown",
-                    category: video.category || "youtube-random",
-                    url: video.url || `https://www.youtube.com/watch?v=${video.id}`,
-                    genre: video.genre,
-                    viewBucket: video.viewBucket,
-                    language: video.language,
-                    ageBucket: video.ageBucket,
-                    likeDislikeSentiment: video.likeDislikeSentiment
-                }));
-        }
-
         async function fetchRemotePair(excludedSet = new Set(), filters = activeFilters) {
             if (!HAS_REMOTE_API) {
                 return null;
@@ -1100,27 +1068,39 @@
                     }
                 }
 
-                try {
-                    const remoteBatch = await fetchRemoteBatch();
-                    if (remoteBatch.length >= 2) {
-                        const pool = remoteBatch.filter((video) => !excluded.has(video.id));
-                        const usable = pool.length >= 2 ? pool : remoteBatch;
-                        const left = usable[Math.floor(Math.random() * usable.length)];
-                        const rightPool = usable.filter((video) => video.id !== left.id);
-                        const right = rightPool[Math.floor(Math.random() * rightPool.length)];
-                        if (left && right) {
-                            registerVideo(left);
-                            registerVideo(right);
-                            seenThisRun.add(left.id);
-                            seenThisRun.add(right.id);
-                            rememberUsedId(left.id);
-                            rememberUsedId(right.id);
-                            lastLoadError = "";
-                            return [state.videosById[left.id], state.videosById[right.id]];
+                const fullyRelaxedFilters = {
+                    genre: "any",
+                    views: "any",
+                    language: "any",
+                    age: "any",
+                    likes: "any"
+                };
+
+                for (let attempt = 0; attempt < 4; attempt += 1) {
+                    try {
+                        const pair = await fetchRemotePair(excluded, fullyRelaxedFilters);
+                        const leftRaw = pair[0];
+                        const rightRaw = pair[1];
+
+                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
+                            continue;
                         }
+
+                        registerVideo(leftRaw);
+                        registerVideo(rightRaw);
+
+                        const left = state.videosById[leftRaw.id];
+                        const right = state.videosById[rightRaw.id];
+
+                        seenThisRun.add(left.id);
+                        seenThisRun.add(right.id);
+                        rememberUsedId(left.id);
+                        rememberUsedId(right.id);
+                        lastLoadError = "";
+                        return [left, right];
+                    } catch (err) {
+                        lastLoadError = String(err && err.message ? err.message : err);
                     }
-                } catch (err) {
-                    lastLoadError = String(err && err.message ? err.message : err);
                 }
 
                 return null;
