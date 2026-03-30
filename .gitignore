@@ -6,5 +6,8 @@
 # Node dependencies
 node_modules/
 
+# Global state data (persisted at runtime, not tracked in git)
+.data/
+
 # macOS
 .DS_Store

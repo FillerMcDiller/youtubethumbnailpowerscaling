@@ -4,56 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Youtube Thumbnail Powerscaling</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-dark: #0f1722;
-            --bg-mid: #132033;
-            --panel: rgba(14, 24, 36, 0.82);
-            --line: rgba(255, 255, 255, 0.12);
-            --text: #f1f6fb;
-            --muted: #a8bccf;
-            --hot: #ff7a18;
-            --cold: #0bb3ff;
-            --win: #8be46d;
-            --danger: #ff5a7a;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Space Grotesk", sans-serif;
-            color: var(--text);
-            background:
-                radial-gradient(circle at 15% 15%, rgba(255, 122, 24, 0.25) 0%, transparent 35%),
-                radial-gradient(circle at 85% 10%, rgba(11, 179, 255, 0.28) 0%, transparent 30%),
-                linear-gradient(135deg, var(--bg-dark), var(--bg-mid));
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            color: #f1f6fb;
+            background: #0f1722;
             padding: 22px;
         }
 
-        .wrap {
-            width: min(1200px, 100%);
-            margin: 0 auto;
-        }
+        .wrap { width: min(1200px, 100%); margin: 0 auto; }
 
         h1 {
             margin: 0;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.6px;
-            font-size: clamp(2.2rem, 5vw, 4rem);
-            line-height: 0.9;
+            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            font-size: clamp(1.8rem, 5vw, 3rem);
         }
 
-        .subtitle {
-            margin-top: 8px;
-            color: var(--muted);
-        }
+        .subtitle { margin-top: 8px; color: #a8bccf; }
 
         .board {
             margin-top: 18px;
@@ -70,37 +41,25 @@
             align-items: flex-end;
         }
 
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            min-width: 140px;
-        }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
 
-        .filter-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--muted);
-        }
+        .filter-label { font-size: 0.8rem; color: #a8bccf; }
 
         .filter-select {
-            border-radius: 999px;
-            border: 1px solid var(--line);
-            background: rgba(10, 18, 30, 0.9);
-            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #132033;
+            color: #f1f6fb;
             padding: 4px 10px;
-            font-size: 0.85rem;
             font-family: inherit;
+            font-size: 0.85rem;
+            border-radius: 4px;
         }
 
         .panel {
-            border: 1px solid var(--line);
-            background: var(--panel);
-            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: #132033;
+            border-radius: 8px;
             padding: 14px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3);
         }
 
         .versus {
@@ -113,31 +72,10 @@
         .video-card {
             display: flex;
             flex-direction: column;
-            border: 1px solid var(--line);
-            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
             overflow: hidden;
             background: rgba(255, 255, 255, 0.03);
-            transform: translateY(18px);
-            opacity: 0;
-            animation: rise-in 350ms ease forwards;
-        }
-
-        .video-card:nth-child(3) {
-            animation-delay: 80ms;
-        }
-
-        @keyframes rise-in {
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        .thumb {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            object-fit: cover;
-            display: block;
         }
 
         .video-frame {
@@ -148,79 +86,47 @@
             background: #000;
         }
 
-        .video-info {
-            padding: 10px;
-        }
+        .video-info { padding: 10px; }
 
-        .video-title {
-            margin: 0 0 8px;
-            font-size: 1rem;
-            font-weight: 700;
-        }
+        .video-title { margin: 0 0 8px; font-size: 1rem; font-weight: 700; }
 
-        .video-meta {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
+        .video-meta { margin: 0; color: #a8bccf; font-size: 0.9rem; }
 
-        .video-link {
-            color: #a9dfff;
-            text-decoration: none;
-            font-size: 0.84rem;
-            word-break: break-all;
-        }
-
-        .video-link:hover {
-            text-decoration: underline;
-        }
+        .video-link { color: #a9dfff; text-decoration: none; font-size: 0.84rem; word-break: break-all; }
+        .video-link:hover { text-decoration: underline; }
 
         .choose-btn {
             margin-top: 10px;
             border: 0;
-            border-radius: 10px;
+            border-radius: 6px;
             padding: 10px 12px;
             font-weight: 700;
             font-family: inherit;
             cursor: pointer;
             color: #0f1722;
-            background: linear-gradient(90deg, var(--hot), #ffb84d);
-            transition: transform 120ms ease, filter 120ms ease;
+            background: #ff7a18;
         }
 
-        .choose-btn:hover {
-            transform: translateY(-1px);
-            filter: saturate(1.12);
-        }
-
-        .choose-btn.right {
-            background: linear-gradient(90deg, var(--cold), #8be1ff);
-        }
+        .choose-btn.right { background: #0bb3ff; }
+        .choose-btn:hover { opacity: 0.85; }
 
         .vs-pill {
             align-self: center;
             background: #0f1722;
-            border: 1px solid var(--line);
-            color: var(--muted);
-            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #a8bccf;
+            border-radius: 6px;
             padding: 7px 12px;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.4px;
             font-size: 1.1rem;
         }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-            margin-top: 12px;
-            flex-wrap: wrap;
-        }
+        .controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 
         .control-btn {
-            border: 1px solid var(--line);
-            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f1f6fb;
             background: #152538;
-            border-radius: 10px;
+            border-radius: 6px;
             padding: 8px 12px;
             font-family: inherit;
             cursor: pointer;
@@ -232,70 +138,38 @@
             background: rgba(255, 90, 122, 0.14);
         }
 
-        .stats-title {
-            margin-top: 0;
-            margin-bottom: 8px;
-            font-family: "Bebas Neue", sans-serif;
-            letter-spacing: 1.2px;
-            font-size: 1.8rem;
-        }
+        .stats-title { margin-top: 0; margin-bottom: 8px; font-size: 1.4rem; }
 
-        .leader-item,
-        .match-item {
-            display: grid;
-            gap: 6px;
-            border: 1px solid var(--line);
-            border-radius: 10px;
+        .leader-item, .match-item {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
             padding: 8px 10px;
             margin-bottom: 8px;
             background: rgba(255, 255, 255, 0.03);
         }
 
-        .leader-item {
-            grid-template-columns: auto 1fr auto;
-            align-items: center;
-        }
+        .leader-item { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; }
 
-        .rank {
-            color: var(--muted);
-            font-weight: 700;
-            min-width: 24px;
-        }
+        .rank { color: #a8bccf; font-weight: 700; min-width: 24px; }
 
-        .power {
-            color: var(--win);
-            font-weight: 700;
-        }
+        .power { color: #8be46d; font-weight: 700; }
 
-        .match-item small {
-            color: var(--muted);
-        }
+        .match-item small { color: #a8bccf; }
 
-        .empty {
-            color: var(--muted);
-            font-size: 0.95rem;
-        }
+        .empty { color: #a8bccf; font-size: 0.95rem; }
 
         .status {
-            border: 1px dashed var(--line);
-            border-radius: 10px;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 6px;
             padding: 14px;
             text-align: center;
-            color: var(--muted);
+            color: #a8bccf;
         }
 
         @media (max-width: 960px) {
-            .board {
-                grid-template-columns: 1fr;
-            }
-
-            .versus {
-                grid-template-columns: 1fr;
-            }
-
-            .vs-pill {
-                justify-self: center;
-            }
+            .board { grid-template-columns: 1fr; }
+            .versus { grid-template-columns: 1fr; }
+            .vs-pill { justify-self: center; }
         }
     </style>
 </head>
@@ -366,13 +240,13 @@
             </section>
 
             <section class="panel">
-                <h2 class="stats-title">Leaderboard</h2>
+                <h2 class="stats-title">Global Leaderboard</h2>
                 <div id="leaderboard"></div>
             </section>
         </div>
 
         <section class="panel" style="margin-top: 16px;">
-            <h2 class="stats-title">Bracket Feed</h2>
+            <h2 class="stats-title">Global Bracket Feed</h2>
             <div id="bracketFeed"></div>
         </section>
     </div>
@@ -1020,43 +894,81 @@
             `;
         }
 
-        function renderLeaderboard() {
-            const known = allKnownVideos();
-            if (known.length === 0) {
-                leaderboardEl.innerHTML = '<p class="empty">No ranked videos yet.</p>';
+        async function renderLeaderboard() {
+            if (IS_FILE_MODE) {
+                const known = allKnownVideos();
+                if (known.length === 0) {
+                    leaderboardEl.innerHTML = '<p class="empty">No ranked videos yet.</p>';
+                    return;
+                }
+                const sorted = [...known].sort((a, b) => {
+                    const powerDiff = (state.powers[b.id] || 0) - (state.powers[a.id] || 0);
+                    if (powerDiff !== 0) return powerDiff;
+                    return a.title.localeCompare(b.title);
+                });
+                leaderboardEl.innerHTML = sorted.map((video, idx) => `
+                    <div class="leader-item">
+                        <span class="rank">#${idx + 1}</span>
+                        <span>${escapeHtml(video.title)}</span>
+                        <span class="power">${state.powers[video.id] || 0} power</span>
+                    </div>
+                `).join("");
                 return;
             }
 
-            const sorted = [...known].sort((a, b) => {
-                const powerDiff = (state.powers[b.id] || 0) - (state.powers[a.id] || 0);
-                if (powerDiff !== 0) {
-                    return powerDiff;
+            try {
+                const res = await fetch("/api/global/leaderboard", { cache: "no-store" });
+                if (!res.ok) throw new Error("failed");
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    leaderboardEl.innerHTML = '<p class="empty">No ranked videos yet.</p>';
+                    return;
                 }
-                return a.title.localeCompare(b.title);
-            });
-
-            leaderboardEl.innerHTML = sorted.map((video, idx) => `
-                <div class="leader-item">
-                    <span class="rank">#${idx + 1}</span>
-                    <span>${escapeHtml(video.title)}</span>
-                    <span class="power">${state.powers[video.id] || 0} power</span>
-                </div>
-            `).join("");
+                leaderboardEl.innerHTML = data.map((v, idx) => `
+                    <div class="leader-item">
+                        <span class="rank">#${idx + 1}</span>
+                        <span><a class="video-link" href="${escapeHtml(v.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v.title)}</a></span>
+                        <span class="power">${v.power} power</span>
+                    </div>
+                `).join("");
+            } catch {
+                leaderboardEl.innerHTML = '<p class="empty">Could not load global leaderboard.</p>';
+            }
         }
 
-        function renderBracketFeed() {
-            if (state.matches.length === 0) {
-                bracketFeedEl.innerHTML = '<p class="empty">No matches yet. Start powerscaling above.</p>';
+        async function renderBracketFeed() {
+            if (IS_FILE_MODE) {
+                if (state.matches.length === 0) {
+                    bracketFeedEl.innerHTML = '<p class="empty">No matches yet. Start powerscaling above.</p>';
+                    return;
+                }
+                const visible = [...state.matches].reverse().slice(0, MAX_FEED_ITEMS);
+                bracketFeedEl.innerHTML = visible.map((match) => `
+                    <div class="match-item">
+                        <div><strong>${escapeHtml(match.winnerTitle)}</strong> defeated ${escapeHtml(match.loserTitle)}</div>
+                        <small>+1 power to winner (${match.winnerPowerAfter} total)</small>
+                    </div>
+                `).join("");
                 return;
             }
 
-            const visible = [...state.matches].reverse().slice(0, MAX_FEED_ITEMS);
-            bracketFeedEl.innerHTML = visible.map((match) => `
-                <div class="match-item">
-                    <div><strong>${escapeHtml(match.winnerTitle)}</strong> defeated ${escapeHtml(match.loserTitle)}</div>
-                    <small>+1 power to winner (${match.winnerPowerAfter} total)</small>
-                </div>
-            `).join("");
+            try {
+                const res = await fetch("/api/global/feed", { cache: "no-store" });
+                if (!res.ok) throw new Error("failed");
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    bracketFeedEl.innerHTML = '<p class="empty">No matches yet. Start powerscaling above.</p>';
+                    return;
+                }
+                bracketFeedEl.innerHTML = data.map((match) => `
+                    <div class="match-item">
+                        <div><strong>${escapeHtml(match.winnerTitle)}</strong> defeated ${escapeHtml(match.loserTitle)}</div>
+                        <small>+1 power to winner (${match.winnerPowerAfter} total)</small>
+                    </div>
+                `).join("");
+            } catch {
+                bracketFeedEl.innerHTML = '<p class="empty">Could not load global bracket feed.</p>';
+            }
         }
 
         function paint() {
@@ -1102,6 +1014,27 @@
             }
 
             saveState();
+
+            // Post to global API in server mode so all users see the updated leaderboard.
+            if (!IS_FILE_MODE) {
+                try {
+                    await fetch("/api/global/match", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            winnerId,
+                            loserId,
+                            winnerTitle: winner ? winner.title : winnerId,
+                            loserTitle: loser ? loser.title : loserId,
+                            winnerChannel: winner ? winner.channel : null,
+                            winnerUrl: winner ? winner.url : `https://www.youtube.com/watch?v=${winnerId}`
+                        })
+                    });
+                } catch {
+                    // Non-fatal: local state is already updated.
+                }
+            }
+
             await queueNextMatchup();
         }
 
@@ -1169,6 +1102,15 @@
             if (languageFilterEl) languageFilterEl.title = "Language filters require online stats; in file mode they behave as Any.";
             if (ageFilterEl) ageFilterEl.title = "Age filters require online stats; in file mode they behave as Any.";
             if (likesFilterEl) likesFilterEl.title = "Likes/dislikes filters require online stats; in file mode they behave as Any.";
+        }
+
+        // Auto-refresh global leaderboard and bracket feed every 10 seconds in
+        // server mode so all users see live updates without a page reload.
+        if (!IS_FILE_MODE) {
+            setInterval(() => {
+                renderLeaderboard();
+                renderBracketFeed();
+            }, 10000);
         }
 
         paint();
