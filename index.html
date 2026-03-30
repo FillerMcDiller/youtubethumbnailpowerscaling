@@ -958,6 +958,10 @@
         }
 
         async function useFallbackPair() {
+            if (HAS_REMOTE_API) {
+                return null;
+            }
+
             for (const video of FALLBACK_VIDEOS) {
                 const meta = syntheticMetaForId(video.id);
                 registerVideo({
