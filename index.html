@@ -347,7 +347,8 @@
         const STORAGE_KEY = "yt-thumbnail-powerscaling-v5";
         const MAX_FEED_ITEMS = 24;
         const MAX_MATCH_HISTORY = 250;
-        const MAX_USED_IDS = 4000;
+        // Only avoid very recent repeats; allow videos to naturally reappear later.
+        const MAX_USED_IDS = 24;
         const MIN_POOL_BEFORE_FETCH = 30;
         const FETCH_ATTEMPTS_PER_PAIR = 6;
         const IS_FILE_MODE = window.location.protocol === "file:";
@@ -628,7 +629,7 @@
 
         function buildUsedIdSet() {
             const persisted = Array.isArray(state.usedIds) ? state.usedIds : [];
-            return new Set([...persisted, ...seenThisRun]);
+            return new Set(persisted);
         }
 
         function registerVideo(video) {
@@ -863,7 +864,7 @@
                 likes: filters.likes || "any"
             });
 
-            const excluded = Array.from(excludedSet).slice(-350);
+            const excluded = Array.from(excludedSet).slice(-MAX_USED_IDS);
             if (excluded.length > 0) {
                 params.set("excluded", excluded.join(","));
             }
