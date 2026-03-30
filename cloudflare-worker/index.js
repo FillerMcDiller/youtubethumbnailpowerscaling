@@ -469,6 +469,19 @@ export default {
 
         const url = new URL(request.url);
 
+        if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
+            return jsonResponse({
+                ok: true,
+                service: "yt-powerscaling-api",
+                endpoints: [
+                    "/api/state",
+                    "/api/video-meta?id=<youtubeId>",
+                    "/api/random-videos?limit=10",
+                    "/api/random-pair?genre=any&views=any&language=any&age=any&likes=any"
+                ]
+            });
+        }
+
         if (request.method === "GET" && url.pathname === "/api/state") {
             const state = await readState(env);
             return jsonResponse(state);
