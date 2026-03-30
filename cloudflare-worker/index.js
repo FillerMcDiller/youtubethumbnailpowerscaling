@@ -229,7 +229,7 @@ async function searchYoutubeIds(env, limit, filters = {}) {
         .filter(Boolean);
 }
 
-async function fetchYoutubeVideosByIds(ids, env) {
+async function fetchYoutubeVideosByIds(ids, env, strict = true) {
     if (!ids.length) {
         return [];
     }
@@ -278,15 +278,20 @@ async function fetchYoutubeVideosByIds(ids, env) {
         if (!video.id) {
             return false;
         }
-        if (!video.embeddable) {
-            return false;
+        
+        // In strict mode, enforce embeddable/public/processed status
+        if (strict) {
+            if (!video.embeddable) {
+                return false;
+            }
+            if (video.privacyStatus && video.privacyStatus !== "public") {
+                return false;
+            }
+            if (video.uploadStatus && video.uploadStatus !== "processed") {
+                return false;
+            }
         }
-        if (video.privacyStatus && video.privacyStatus !== "public") {
-            return false;
-        }
-        if (video.uploadStatus && video.uploadStatus !== "processed") {
-            return false;
-        }
+        
         return true;
     });
 }
@@ -376,7 +381,7 @@ async function handleRandomVideos(request, env) {
     }
 
     try {
-        const videos = await fetchYoutubeVideosByIds(ids, env);
+        const videos = await fetchYoutubeVideosByIds(ids, env, true);
         return jsonResponse({ videos });
     } catch (err) {
         return jsonResponse({ error: "YouTube details API error", details: String(err && err.message ? err.message : err) }, 502);
@@ -405,13 +410,19 @@ async function handleRandomPair(request, env) {
             .filter(Boolean)
     );
 
-    const candidatesById = new Map();
+    let candidatesById = new Map();
+    let searchErrorCount = 0;
+    let fetchErrorCount = 0;
+    let totalFetched = 0;
+    let filteredOut = 0;
 
+    // First pass: strict filtering (embeddable + public + processed)
     for (let attempt = 0; attempt < MAX_PAIR_ATTEMPTS; attempt += 1) {
         let ids = [];
         try {
             ids = await searchYoutubeIds(env, SEARCH_BATCH_SIZE, filters);
-        } catch {
+        } catch (err) {
+            searchErrorCount++;
             continue;
         }
 
@@ -421,19 +432,25 @@ async function handleRandomPair(request, env) {
 
         let videos = [];
         try {
-            videos = await fetchYoutubeVideosByIds(ids, env);
-        } catch {
+            videos = await fetchYoutubeVideosByIds(ids, env, true);
+        } catch (err) {
+            fetchErrorCount++;
             continue;
         }
 
+        totalFetched += videos.length;
+
         for (const video of videos) {
             if (!video || !video.id) {
+                filteredOut++;
                 continue;
             }
             if (excludedIds.has(video.id)) {
+                filteredOut++;
                 continue;
             }
             if (!videoMatchesFilters(video, filters)) {
+                filteredOut++;
                 continue;
             }
             candidatesById.set(video.id, video);
@@ -444,12 +461,65 @@ async function handleRandomPair(request, env) {
         }
     }
 
+    // If not enough candidates found in strict mode, do lenient pass
+    if (candidatesById.size < 2) {
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            let ids = [];
+            try {
+                ids = await searchYoutubeIds(env, SEARCH_BATCH_SIZE, filters);
+            } catch (err) {
+                searchErrorCount++;
+                continue;
+            }
+
+            if (!ids.length) {
+                continue;
+            }
+
+            let videos = [];
+            try {
+                videos = await fetchYoutubeVideosByIds(ids, env, false);
+            } catch (err) {
+                fetchErrorCount++;
+                continue;
+            }
+
+            totalFetched += videos.length;
+
+            for (const video of videos) {
+                if (!video || !video.id) {
+                    filteredOut++;
+                    continue;
+                }
+                if (excludedIds.has(video.id)) {
+                    filteredOut++;
+                    continue;
+                }
+                if (!videoMatchesFilters(video, filters)) {
+                    filteredOut++;
+                    continue;
+                }
+                candidatesById.set(video.id, video);
+            }
+
+            if (candidatesById.size >= 2) {
+                break;
+            }
+        }
+    }
+
     const candidates = Array.from(candidatesById.values());
     if (candidates.length < 2) {
         return jsonResponse({
             error: "Not enough matching videos right now",
             filters,
-            candidateCount: candidates.length
+            candidateCount: candidates.length,
+            diagnostics: {
+                searchErrors: searchErrorCount,
+                fetchErrors: fetchErrorCount,
+                totalFetched,
+                filteredOut
+            }
         }, 404);
     }
 
