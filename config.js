@@ -3,6 +3,8 @@ window.__POWERSCALING_CONFIG__ = {
     // Example: "https://yt-powerscaling-api.your-subdomain.workers.dev"
     apiBase: "https://yt-powerscaling-api.youtubepowerscaling.workers.dev",
 
-    // Set to false in production on GitHub Pages so missing API config is obvious.
-    allowLocalFallback: false
+    // Allow the app to fall back to local/browser-side sources
+    // (Reddit/Invidious/offline pool) if the remote API is unavailable
+    // or the YouTube Data API quota is exhausted.
+    allowLocalFallback: true
 };
