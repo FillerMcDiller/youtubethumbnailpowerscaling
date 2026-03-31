@@ -1460,7 +1460,8 @@
                 return a.title.localeCompare(b.title);
             });
 
-            leaderboardEl.innerHTML = sorted.map((video, idx) => `
+                const topTen = sorted.slice(0, 10);
+                leaderboardEl.innerHTML = topTen.map((video, idx) => `
                 <div class="leader-item">
                     <span class="rank">#${idx + 1}</span>
                     <span>${escapeHtml(video.title)}</span>
