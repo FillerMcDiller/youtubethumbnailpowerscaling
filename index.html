@@ -1310,6 +1310,10 @@
                 state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
             }
 
+            // Immediately reflect the updated power and match history
+            // in the UI so the leaderboard feels live.
+            paint();
+
             try {
                 await saveState();
             } catch {
