@@ -969,7 +969,10 @@
         }
 
         async function useFallbackPair() {
-            if (HAS_REMOTE_API) {
+            // Only honor this fallback when local/browser-side fallback
+            // is allowed. This lets us recover from remote API quota
+            // errors even when a remote apiBase is configured.
+            if (!ALLOW_LOCAL_FALLBACK) {
                 return null;
             }
 
