@@ -371,7 +371,9 @@
         const REQUIRE_REMOTE_ON_GH_PAGES = IS_GITHUB_PAGES && !HAS_REMOTE_API;
 
         const REDDIT_SOURCES = [
-            "videos", "deepintoyoutube", "youtubehaiku", "ObscureMedia", "Documentaries", "crazyvideos", "nextfuckinglevel", "gaming"
+            "videos", "deepintoyoutube", "youtubehaiku", "ObscureMedia", "Documentaries", "crazyvideos", 
+            "nextfuckinglevel", "gaming", "shitposting", "InternetIsBeautiful", "Damnthatsinteresting",
+            "CrazyFuckingVideos", "WinStupidPrizes", "Whatcouldgowrong", "IllegalLifeProTips"
         ];
         const REDDIT_LISTINGS = ["hot", "new", "top"];
 
@@ -384,10 +386,12 @@
 
         const QUERY_TOPICS = [
             "cooking", "documentary", "true crime", "epstein island documentary", "space", "history", "engineering", "iceberg explained",
-            "wildlife", "speedrun", "lost media", "weird internet", "horror short film", "math", "physics", "street food", "podcast clips"
+            "wildlife", "speedrun", "lost media", "weird internet", "horror short film", "math", "physics", "street food", "podcast clips",
+            "shitpost", "meme compilation", "unhinged", "cursed", "blurry video", "ancient footage", "forbidden", "rare footage", "chaos"
         ];
         const QUERY_MODIFIERS = [
-            "6 hour", "full", "obscure", "viral", "unhinged", "classic", "live", "compilation", "analysis", "extended", "2024", "2025"
+            "6 hour", "full", "obscure", "viral", "unhinged", "classic", "live", "compilation", "analysis", "extended", "2024", "2025",
+            "rare", "cursed", "blurry", "ancient", "forbidden", "weird", "creepy", "chaos", "absolute", "pure", "raw"
         ];
 
         const FALLBACK_VIDEOS = [
@@ -827,6 +831,145 @@
             return results;
         }
 
+        // NEW: Batch fetch YouTube metadata for multiple video IDs at once
+        // This ensures all titles are ACTUAL YouTube titles, not source titles
+        async function batchFetchVideoMetadata(videoIds) {
+            if (!videoIds || !videoIds.length || !HAS_METADATA_API) {
+                return [];
+            }
+
+            const dedupedIds = Array.from(new Set(videoIds));
+            const results = [];
+
+            // Fetch metadata in parallel but throttle to avoid overload
+            const batchSize = 5;
+            for (let i = 0; i < dedupedIds.length; i += batchSize) {
+                const batch = dedupedIds.slice(i, i + batchSize);
+                const promises = batch.map(id =>
+                    fetch(apiUrl(`/api/video-meta?id=${encodeURIComponent(id)}`), { cache: "no-store" })
+                        .then(r => r.ok ? r.json() : null)
+                        .catch(() => null)
+                );
+
+                const batchResults = await Promise.all(promises);
+                for (const meta of batchResults) {
+                    if (meta && meta.id) {
+                        results.push(meta);
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        // NEW: Search Twitter/Bluesky for YouTube links
+        async function fetchTwitterBatch() {
+            try {
+                const query = buildRandomQuery();
+                const endpoint = `https://api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=${encodeURIComponent(query + " youtube.com")}`;
+
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error("bluesky-failed");
+                }
+
+                const json = await response.json();
+                const posts = json && json.posts ? json.posts : [];
+                const results = [];
+
+                for (const post of posts) {
+                    const text = post && post.record && post.record.text ? post.record.text : "";
+                    const youtubeMatch = text.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                    if (!youtubeMatch) continue;
+
+                    const id = youtubeMatch[1];
+                    results.push({
+                        id,
+                        title: `YouTube Video ${id}`, // Will be replaced by batch metadata fetch
+                        channel: post && post.author && post.author.displayName ? post.author.displayName : "Bluesky user",
+                        category: "bluesky",
+                        url: `https://www.youtube.com/watch?v=${id}`
+                    });
+                }
+
+                return results;
+            } catch {
+                return [];
+            }
+        }
+
+        // NEW: Search TikTok for YouTube links in captions/comments
+        async function fetchTikTokBatch() {
+            try {
+                const query = buildRandomQuery();
+                // TikTok doesn't have a public API, but we can try searching for TikToks that mention YouTube videos
+                const endpoint = `https://www.tiktok.com/api/search/general/full/?keywords=${encodeURIComponent(query)}&type=1`;
+
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error("tiktok-failed");
+                }
+
+                const json = await response.json();
+                const videos = json && json.data && json.data.videos ? json.data.videos : [];
+                const results = [];
+
+                for (const video of videos) {
+                    const desc = video && video.desc ? video.desc : "";
+                    const youtubeMatch = desc.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                    if (!youtubeMatch) continue;
+
+                    const id = youtubeMatch[1];
+                    results.push({
+                        id,
+                        title: `YouTube Video ${id}`, // Will be replaced by batch metadata fetch
+                        channel: video && video.author && video.author.nickname ? video.author.nickname : "TikToker",
+                        category: "tiktok",
+                        url: `https://www.youtube.com/watch?v=${id}`
+                    });
+                }
+
+                return results;
+            } catch {
+                return [];
+            }
+        }
+
+        // NEW: Direct YouTube search (client-side, minimal quota impact)
+        async function fetchYouTubeSearchBatch() {
+            try {
+                if (!HAS_REMOTE_API) {
+                    return [];
+                }
+
+                const query = buildRandomQuery();
+                const endpoint = apiUrl(`/api/random-videos?limit=15`);
+
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) {
+                    throw new Error("youtube-search-failed");
+                }
+
+                const json = await response.json();
+                const videos = json && json.videos ? json.videos : [];
+                
+                return videos.map(v => ({
+                    id: v.id,
+                    title: v.title || `YouTube Video ${v.id}`,
+                    channel: v.channel || "Unknown",
+                    category: "youtube-search",
+                    url: v.url || `https://www.youtube.com/watch?v=${v.id}`,
+                    genre: v.genre,
+                    viewBucket: v.viewBucket,
+                    language: v.language,
+                    ageBucket: v.ageBucket,
+                    likeDislikeSentiment: v.likeDislikeSentiment
+                }));
+            } catch {
+                return [];
+            }
+        }
+
         async function fetchRemotePair(excludedSet = new Set(), filters = activeFilters) {
             if (!HAS_REMOTE_API) {
                 return null;
@@ -899,26 +1042,62 @@
             const seenQueueIds = new Set(candidateQueue.map((video) => video.id));
             const usedIds = buildUsedIdSet();
 
-            const addBatch = (batch) => {
-                for (const video of batch) {
-                    if (!seenQueueIds.has(video.id) && !usedIds.has(video.id)) {
-                        candidateQueue.push(video);
-                        seenQueueIds.add(video.id);
+            const addBatchWithMetadata = async (batch) => {
+                if (!batch || batch.length === 0) return;
+
+                // Extract video IDs and batch-fetch their YouTube metadata
+                const ids = batch.map(v => v.id).filter(Boolean);
+                let metadataByID = {};
+
+                if (ids.length > 0) {
+                    const metadata = await batchFetchVideoMetadata(ids);
+                    for (const meta of metadata) {
+                        if (meta && meta.id) {
+                            metadataByID[meta.id] = meta;
+                        }
                     }
+                }
+
+                // Add videos with YouTube metadata (not source titles)
+                for (const video of batch) {
+                    if (seenQueueIds.has(video.id) || usedIds.has(video.id)) {
+                        continue;
+                    }
+
+                    const youtubeData = metadataByID[video.id];
+                    const enriched = {
+                        id: video.id,
+                        title: youtubeData && youtubeData.title ? youtubeData.title : `YouTube Video ${video.id}`,
+                        channel: youtubeData && youtubeData.channel ? youtubeData.channel : video.channel,
+                        category: video.category,
+                        url: youtubeData && youtubeData.url ? youtubeData.url : video.url,
+                        genre: youtubeData ? youtubeData.genre : undefined,
+                        viewBucket: youtubeData ? youtubeData.viewBucket : undefined,
+                        language: youtubeData ? youtubeData.language : undefined,
+                        ageBucket: youtubeData ? youtubeData.ageBucket : undefined,
+                        likeDislikeSentiment: youtubeData ? youtubeData.likeDislikeSentiment : undefined
+                    };
+
+                    candidateQueue.push(enriched);
+                    seenQueueIds.add(video.id);
                 }
             };
 
             let addedAny = false;
 
+            // Try YouTube direct API first (best metadata + caching)
             if (HAS_REMOTE_API) {
                 try {
-                    const remoteBatch = await fetchRemoteBatch();
-                    addBatch(remoteBatch);
-                    if (remoteBatch.length > 0) {
+                    const youtube = await fetchYouTubeSearchBatch();
+                    await addBatchWithMetadata(youtube);
+                    if (youtube.length > 0) {
                         addedAny = true;
                     }
+                    if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                        return true;
+                    }
                 } catch {
-                    // Continue to browser sources as secondary fallback.
+                    // Continue to other sources
                 }
 
                 if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
@@ -926,24 +1105,60 @@
                 }
             }
 
+            // Reddit (good for shitposting and diverse content)
             try {
                 const reddit = await fetchRedditBatch();
-                addBatch(reddit);
+                await addBatchWithMetadata(reddit);
                 if (reddit.length > 0) {
                     addedAny = true;
                 }
+                if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                    return true;
+                }
             } catch {
-                // Continue to other sources.
+                // Continue to other sources
             }
 
+            // Invidious (privacy-focused YouTube search)
             try {
                 const invidious = await fetchInvidiousBatch();
-                addBatch(invidious);
+                await addBatchWithMetadata(invidious);
                 if (invidious.length > 0) {
                     addedAny = true;
                 }
+                if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                    return true;
+                }
             } catch {
-                // Fallback will handle total failure.
+                // Continue to other sources
+            }
+
+            // Bluesky/Twitter (social media shitposts)
+            try {
+                const twitter = await fetchTwitterBatch();
+                await addBatchWithMetadata(twitter);
+                if (twitter.length > 0) {
+                    addedAny = true;
+                }
+                if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                    return true;
+                }
+            } catch {
+                // Continue to other sources
+            }
+
+            // TikTok (for raw unhinged content)
+            try {
+                const tiktok = await fetchTikTokBatch();
+                await addBatchWithMetadata(tiktok);
+                if (tiktok.length > 0) {
+                    addedAny = true;
+                }
+                if (candidateQueue.length >= MIN_POOL_BEFORE_FETCH) {
+                    return true;
+                }
+            } catch {
+                // Fallback will handle total failure
             }
 
             return addedAny || candidateQueue.length > 0;
