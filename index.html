@@ -1293,9 +1293,77 @@
         }
 
         async function recordWin(winnerId, loserId) {
-            state.powers[winnerId] = (state.powers[winnerId] || 0) + 1;
             const winner = state.videosById[winnerId];
             const loser = state.videosById[loserId];
+
+            // If we have a remote API, submit to server for validation and authoritative power increment
+            if (HAS_REMOTE_API && !IS_FILE_MODE) {
+                try {
+                    const response = await fetch(apiUrl("/api/submit-match"), {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            winnerId,
+                            loserId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        // Power cap or rate limit hit - show user feedback
+                        if (response.status === 400) {
+                            if (errorData.error === "Power cap reached") {
+                                console.warn(`Video ${winnerId} has reached max power (${errorData.maxPower}).`);
+                                versusArea.innerHTML = `<div class="status">This video has reached the power cap (${errorData.maxPower})! Matchup skipped.</div>`;
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                            } else {
+                                console.error("Match validation failed:", errorData.error);
+                            }
+                        } else if (response.status === 429) {
+                            // Rate limited
+                            console.warn(`Rate limited: ${errorData.error}`);
+                            versusArea.innerHTML = `<div class="status">⏳ Too many votes too quickly. Slow down!</div>`;
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        } else {
+                            console.error("Submit-match API error:", response.status, errorData);
+                        }
+                        await queueNextMatchup();
+                        return;
+                    }
+
+                    const result = await response.json();
+                    // Use server-authoritative power increment
+                    state.powers[winnerId] = result.match.newWinnerPower;
+
+                    state.matches.push({
+                        winnerId,
+                        loserId,
+                        winnerTitle: winner ? winner.title : winnerId,
+                        loserTitle: loser ? loser.title : loserId,
+                        winnerPowerAfter: state.powers[winnerId],
+                        happenedAt: Date.now()
+                    });
+
+                    if (state.matches.length > MAX_MATCH_HISTORY) {
+                        state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
+                    }
+
+                    paint();
+                    await queueNextMatchup();
+                    return;
+                } catch (err) {
+                    // If remote submit fails, fall back to local mode if allowed
+                    if (!ALLOW_LOCAL_FALLBACK) {
+                        console.error("Server match submission failed and fallback not allowed");
+                        await queueNextMatchup();
+                        return;
+                    }
+                    // Otherwise fall through to local persistence below
+                }
+            }
+
+            // Local fallback mode: client-side power increments (when remote API unavailable)
+            state.powers[winnerId] = (state.powers[winnerId] || 0) + 1;
 
             state.matches.push({
                 winnerId,
@@ -1310,8 +1378,6 @@
                 state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
             }
 
-            // Immediately reflect the updated power and match history
-            // in the UI so the leaderboard feels live.
             paint();
 
             try {

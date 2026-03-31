@@ -5,6 +5,13 @@ const MAX_PAIR_ATTEMPTS = 12;
 const SEARCH_BATCH_SIZE = 25;
 const CACHE_TTL_SECONDS = 3600; // Cache results for 1 hour
 const VIDEO_CACHE_PREFIX = "video-cache:";
+const RATE_LIMIT_KEY = "rate-limit:";
+const MAX_POWER_PER_VIDEO = 100; // Hard cap on power per video
+const MAX_POWER_INCREASE = 1; // Only +1 per match win
+const REQUESTS_PER_MINUTE = 30; // Very aggressive autoclicker detection
+const MATCHES_PER_MINUTE = 20;
+const SEARCH_CACHE_PREFIX = "search-cache:";
+const SEARCH_CACHE_TTL = 7200; // Cache search results for 2 hours
 
 const QUERY_TOPICS = [
     "cooking", "documentary", "true crime", "space", "history", "engineering", "iceberg explained",
@@ -50,6 +57,40 @@ function jsonResponse(payload, status = 200) {
             ...corsHeaders()
         }
     });
+}
+
+async function getRateLimitKey(env, clientId, type) {
+    const key = `${RATE_LIMIT_KEY}${clientId}:${type}`;
+    const raw = await env.POWERSCALING_KV.get(key);
+    const data = raw ? JSON.parse(raw) : { count: 0, resetAt: Date.now() + 60000 };
+    
+    const now = Date.now();
+    if (now > data.resetAt) {
+        return { count: 0, resetAt: now + 60000 };
+    }
+    return data;
+}
+
+async function checkRateLimit(env, clientId, type, maxPerMinute) {
+    const data = await getRateLimitKey(env, clientId, type);
+    const now = Date.now();
+    
+    if (data.count >= maxPerMinute) {
+        return { allowed: false, retryAfter: Math.ceil((data.resetAt - now) / 1000) };
+    }
+    
+    data.count++;
+    const key = `${RATE_LIMIT_KEY}${clientId}:${type}`;
+    await env.POWERSCALING_KV.put(key, JSON.stringify(data), { expirationTtl: 120 });
+    
+    return { allowed: true };
+}
+
+function getClientId(request) {
+    // IP-based client identification for rate limiting
+    return request.headers.get("cf-connecting-ip") || 
+           request.headers.get("x-forwarded-for")?.split(",")[0] || 
+           "unknown";
 }
 
 function normalizeState(input) {
@@ -205,11 +246,32 @@ function videoMatchesFilters(video, filters) {
 }
 
 async function searchYoutubeIds(env, limit, filters = {}) {
+    const query = buildRandomQuery(filters);
+    const cacheKey = `${SEARCH_CACHE_PREFIX}${query}`;
+    
+    // Check cached search results first
+    try {
+        const cached = await env.POWERSCALING_KV.get(cacheKey);
+        if (cached) {
+            const result = JSON.parse(cached);
+            if (Array.isArray(result) && result.length > 0) {
+                // Randomize order on cache hit to keep variety
+                for (let i = result.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [result[i], result[j]] = [result[j], result[i]];
+                }
+                return result.slice(0, Math.min(limit, 50));
+            }
+        }
+    } catch {
+        // Cache miss - continue to live search
+    }
+
     const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
     searchUrl.searchParams.set("part", "snippet");
     searchUrl.searchParams.set("type", "video");
     searchUrl.searchParams.set("maxResults", String(Math.min(limit, 50)));
-    searchUrl.searchParams.set("q", buildRandomQuery(filters));
+    searchUrl.searchParams.set("q", query);
     searchUrl.searchParams.set("order", randomFrom(SORT_OPTIONS));
     searchUrl.searchParams.set("safeSearch", "none");
     searchUrl.searchParams.set("videoEmbeddable", "true");
@@ -226,9 +288,20 @@ async function searchYoutubeIds(env, limit, filters = {}) {
     const searchJson = await searchResponse.json();
     const items = Array.isArray(searchJson.items) ? searchJson.items : [];
 
-    return items
+    const ids = items
         .map((item) => item && item.id && item.id.videoId ? String(item.id.videoId) : "")
         .filter(Boolean);
+
+    // Cache the search results
+    if (ids.length > 0) {
+        try {
+            await env.POWERSCALING_KV.put(cacheKey, JSON.stringify(ids), { expirationTtl: SEARCH_CACHE_TTL });
+        } catch {
+            // Cache write failure is non-fatal
+        }
+    }
+
+    return ids;
 }
 
 async function fetchYoutubeVideosByIds(ids, env, strict = true) {
@@ -430,6 +503,15 @@ async function handleRandomPair(request, env) {
         return jsonResponse({ error: "Missing YT_API_KEY secret" }, 500);
     }
 
+    const clientId = getClientId(request);
+    const rateLimitCheck = await checkRateLimit(env, clientId, "pair", REQUESTS_PER_MINUTE);
+    if (!rateLimitCheck.allowed) {
+        return jsonResponse({
+            error: "Rate limit exceeded",
+            retryAfter: rateLimitCheck.retryAfter
+        }, 429);
+    }
+
     const url = new URL(request.url);
     const filters = {
         genre: url.searchParams.get("genre") || "any",
@@ -617,6 +699,79 @@ async function handleRandomPair(request, env) {
     return jsonResponse({ pair: [left, right], candidateCount: candidates.length });
 }
 
+async function handleSubmitMatch(request, env) {
+    // NEW ENDPOINT: Server-authoritative match submission with validation
+    const clientId = getClientId(request);
+    const rateLimitCheck = await checkRateLimit(env, clientId, "match", MATCHES_PER_MINUTE);
+    if (!rateLimitCheck.allowed) {
+        return jsonResponse({
+            error: "Rate limit exceeded - too many matches submitted",
+            retryAfter: rateLimitCheck.retryAfter
+        }, 429);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return jsonResponse({ error: "Invalid JSON body" }, 400);
+    }
+
+    const { winnerId, loserId } = body;
+    if (!winnerId || !loserId || typeof winnerId !== "string" || typeof loserId !== "string") {
+        return jsonResponse({ error: "Invalid match: need winnerId and loserId strings" }, 400);
+    }
+
+    if (winnerId === loserId) {
+        return jsonResponse({ error: "Invalid match: can't vote for same video twice" }, 400);
+    }
+
+    const state = await readState(env);
+
+    // Ensure winner exists
+    if (!state.videosById[winnerId]) {
+        return jsonResponse({ error: "Video not found: winner" }, 404);
+    }
+
+    // Initialize loser if needed (shouldn't need this, but safety check)
+    if (!state.videosById[loserId]) {
+        state.videosById[loserId] = { id: loserId, title: "Unknown", views: 0 };
+    }
+
+    // Enforce power cap: only allow +1 if below cap
+    const currentWinnerPower = state.powers[winnerId] || 0;
+    if (currentWinnerPower >= MAX_POWER_PER_VIDEO) {
+        return jsonResponse({
+            error: "Power cap reached",
+            maxPower: MAX_POWER_PER_VIDEO,
+            currentPower: currentWinnerPower
+        }, 400);
+    }
+
+    // Server-authoritative power increment: always +1, never more
+    state.powers[winnerId] = (state.powers[winnerId] || 0) + MAX_POWER_INCREASE;
+    state.matches.push({
+        winner: winnerId,
+        loser: loserId,
+        timestamp: Date.now()
+    });
+
+    // Keep match history clean
+    if (state.matches.length > MAX_MATCH_HISTORY) {
+        state.matches = state.matches.slice(-MAX_MATCH_HISTORY);
+    }
+
+    const saved = await writeState(env, state);
+    return jsonResponse({
+        ok: true,
+        match: {
+            winnerId,
+            loserId,
+            newWinnerPower: saved.powers[winnerId]
+        }
+    });
+}
+
 export default {
     async fetch(request, env) {
         if (request.method === "OPTIONS") {
@@ -644,14 +799,17 @@ export default {
         }
 
         if (request.method === "POST" && url.pathname === "/api/state") {
-            let body;
-            try {
-                body = await request.json();
-            } catch {
-                return jsonResponse({ error: "Invalid JSON body" }, 400);
-            }
-            const saved = await writeState(env, body);
-            return jsonResponse({ ok: true, state: saved });
+            // DEPRECATED: Use /api/submit-match for match submissions instead
+            // Raw state writes are no longer allowed to prevent abuse
+            return jsonResponse({
+                error: "Direct state writes are deprecated",
+                message: "Use POST /api/submit-match { winnerId, loserId } instead",
+                documentation: "This endpoint now only reads state. Submit matches server-validated."
+            }, 410);
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/submit-match") {
+            return handleSubmitMatch(request, env);
         }
 
         if (request.method === "GET" && url.pathname === "/api/video-meta") {
