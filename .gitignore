@@ -8,3 +8,5 @@ node_modules/
 
 # macOS
 .DS_Store
+#i hate you .md
+*.md
