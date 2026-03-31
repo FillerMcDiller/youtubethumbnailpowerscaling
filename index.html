@@ -1227,24 +1227,59 @@
             return hydrated;
         }
 
+        async function getSingleVideoFromRemote(excludedSet = new Set(), filters = activeFilters) {
+            if (!HAS_REMOTE_API) {
+                return null;
+            }
+
+            const params = new URLSearchParams({
+                genre: filters.genre || "any",
+                views: filters.views || "any",
+                language: filters.language || "any",
+                age: filters.age || "any",
+                likes: filters.likes || "any"
+            });
+
+            const excluded = Array.from(excludedSet).slice(-MAX_USED_IDS);
+            if (excluded.length > 0) {
+                params.set("excluded", excluded.join(","));
+            }
+
+            const endpoint = apiUrl(`/api/random-pair?${params.toString()}`);
+            const response = await fetch(endpoint, { cache: "no-store" });
+            if (!response.ok) {
+                throw new Error(`remote-single-failed:${response.status}`);
+            }
+
+            const payload = await response.json();
+            if (!payload || !Array.isArray(payload.pair) || payload.pair.length < 2) {
+                throw new Error("remote-single-invalid");
+            }
+
+            // Return a random video from the pair (allows mixing sources)
+            const video = randomFrom(payload.pair);
+            registerVideo(video);
+            return state.videosById[video.id];
+        }
+
         async function buildFreshPair() {
+            // ENHANCED: Each video can now come from different sources independently
+            const excluded = buildUsedIdSet();
+
             if (HAS_REMOTE_API) {
-                const excluded = buildUsedIdSet();
+                // Try to build pair with independent video selection (each can come from different sources)
                 for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
                     try {
-                        const pair = await fetchRemotePair(excluded, activeFilters);
-                        const leftRaw = pair[0];
-                        const rightRaw = pair[1];
+                        // Get left video from remote
+                        const left = await getSingleVideoFromRemote(excluded, activeFilters);
+                        if (!left) continue;
 
-                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
-                            continue;
-                        }
+                        // Get right video from remote with left excluded
+                        const rightExcluded = new Set(excluded);
+                        rightExcluded.add(left.id);
+                        const right = await getSingleVideoFromRemote(rightExcluded, activeFilters);
 
-                        registerVideo(leftRaw);
-                        registerVideo(rightRaw);
-
-                        const left = state.videosById[leftRaw.id];
-                        const right = state.videosById[rightRaw.id];
+                        if (!right || left.id === right.id) continue;
 
                         seenThisRun.add(left.id);
                         seenThisRun.add(right.id);
@@ -1254,10 +1289,10 @@
                         return [left, right];
                     } catch (err) {
                         lastLoadError = String(err && err.message ? err.message : err);
-                        // Retry with a fresh remote query.
                     }
                 }
 
+                // Retry with relaxed filters
                 const relaxedFilters = {
                     genre: activeFilters.genre,
                     views: "any",
@@ -1268,19 +1303,14 @@
 
                 for (let attempt = 0; attempt < 4; attempt += 1) {
                     try {
-                        const pair = await fetchRemotePair(excluded, relaxedFilters);
-                        const leftRaw = pair[0];
-                        const rightRaw = pair[1];
+                        const left = await getSingleVideoFromRemote(excluded, relaxedFilters);
+                        if (!left) continue;
 
-                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
-                            continue;
-                        }
+                        const rightExcluded = new Set(excluded);
+                        rightExcluded.add(left.id);
+                        const right = await getSingleVideoFromRemote(rightExcluded, relaxedFilters);
 
-                        registerVideo(leftRaw);
-                        registerVideo(rightRaw);
-
-                        const left = state.videosById[leftRaw.id];
-                        const right = state.videosById[rightRaw.id];
+                        if (!right || left.id === right.id) continue;
 
                         seenThisRun.add(left.id);
                         seenThisRun.add(right.id);
@@ -1290,10 +1320,10 @@
                         return [left, right];
                     } catch (err) {
                         lastLoadError = String(err && err.message ? err.message : err);
-                        // Continue trying relaxed remote pulls.
                     }
                 }
 
+                // Retry with fully relaxed filters
                 const fullyRelaxedFilters = {
                     genre: "any",
                     views: "any",
@@ -1304,19 +1334,14 @@
 
                 for (let attempt = 0; attempt < 4; attempt += 1) {
                     try {
-                        const pair = await fetchRemotePair(excluded, fullyRelaxedFilters);
-                        const leftRaw = pair[0];
-                        const rightRaw = pair[1];
+                        const left = await getSingleVideoFromRemote(excluded, fullyRelaxedFilters);
+                        if (!left) continue;
 
-                        if (!leftRaw || !rightRaw || !leftRaw.id || !rightRaw.id || leftRaw.id === rightRaw.id) {
-                            continue;
-                        }
+                        const rightExcluded = new Set(excluded);
+                        rightExcluded.add(left.id);
+                        const right = await getSingleVideoFromRemote(rightExcluded, fullyRelaxedFilters);
 
-                        registerVideo(leftRaw);
-                        registerVideo(rightRaw);
-
-                        const left = state.videosById[leftRaw.id];
-                        const right = state.videosById[rightRaw.id];
+                        if (!right || left.id === right.id) continue;
 
                         seenThisRun.add(left.id);
                         seenThisRun.add(right.id);
@@ -1337,6 +1362,7 @@
                 // browser source fallback instead of hard-failing the matchup.
             }
 
+            // Local browser sources: each video can independently come from different sources (Reddit, Invidious, etc)
             for (let attempt = 0; attempt < FETCH_ATTEMPTS_PER_PAIR; attempt += 1) {
                 await refillCandidateQueueIfNeeded();
 
